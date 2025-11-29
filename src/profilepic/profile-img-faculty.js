@@ -1,9 +1,10 @@
 const router = require("express").Router();
-const verify = require("./src/common/middleware");
+const verify = require("../common/middleware");
 const multer = require("multer");
 const Faculty = require("../accounts/creation-faculty").Faculty;
 const Student = require("../accounts/creation-students").Student;
 
+const axios = require("axios");
 const { s3Client, MINIO_BUCKET,ensureBucket } = require("../common/minio-cfg");
 ensureBucket();   
 
@@ -12,14 +13,14 @@ const { S3RequestPresigner } = require("@aws-sdk/s3-request-presigner");
 const { HttpRequest } = require("@aws-sdk/protocol-http");
 const { formatUrl } = require("@aws-sdk/util-format-url");
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const { Sha256 } = require("@aws-sdk/hash-node");
+const { Hash } = require("@aws-sdk/hash-node");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 async function signedUrl(objectKey) {
   const signer = new S3RequestPresigner({
     ...s3Client.config,
-    sha256: (0, require("@aws-sdk/hash-node").Sha256),
+    sha256: Hash.bind(null, "sha256"),
   });
 
   const req = new HttpRequest({
@@ -67,10 +68,11 @@ async function signedUrl(objectKey) {
     }
     });
 
-// ---------------------------
-// VIEW ANY USER PHOTO (faculty)
-// ---------------------------
-router.get("/photo-url/:auth_user_id", verify, async (req, res) => {
+// ----------------------------------------------
+// PROXY IMAGE VIEW (faculty → any user)
+// ----------------------------------------------
+router.get("/view/:auth_user_id", verify, async (req, res) => {
+
   if (req.user.role !== "faculty") {
     return res.status(403).json({ issue: "forbidden" });
   }
@@ -85,10 +87,13 @@ router.get("/photo-url/:auth_user_id", verify, async (req, res) => {
     return res.status(404).json({ issue: "not_found" });
   }
 
-  res.json({
-    success: true,
-    url: await signedUrl(record.profile_image_key)
-  });
-});
+  // Generate signed MinIO URL
+  const url = await signedUrl(record.profile_image_key);
 
+  // Stream the file
+  const response = await axios.get(url, { responseType: "stream" });
+
+  res.setHeader("Content-Type", response.headers["content-type"]);
+  response.data.pipe(res);   // DIRECT STREAM
+});
 module.exports = router;

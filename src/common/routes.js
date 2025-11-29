@@ -11,18 +11,13 @@ module.exports = [
   { path: "./src/profile/profile-students.js", prefix: "/bs1/profile" },
   { path: "./src/profile/profile-faculty.js", prefix: "/bf1/profile" },
 
- 
-
-
-
   { path: "./src/leave-outpass/leave-outpass-students.js", prefix: "/bs1/leave-outpass" },
   { path: "./src/leave-outpass/leave-outpass-faculty.js", prefix: "/bf1/leave-outpass" },
 
+
+
   { path: "./src/room-management/room-student.js", prefix: "/bs1/rooms" },
   { path: "./src/room-management/room-faculty.js", prefix: "/bf1/rooms" },
-
-  { path: "./src/fees/fees-student.js", prefix: "/bs1/fees" },
-  { path: "./src/fees/fees-faculty.js", prefix: "/bf1/fees" },
 
   { path: "./src/complaints/complaints-students.js", prefix: "/bs1/complaints" },
   { path: "./src/complaints/complaints-faculty.js", prefix: "/bf1/complaints" },
@@ -30,7 +25,8 @@ module.exports = [
   { path: "./src/notices/notices-students.js", prefix: "/bs1/notices" },
   { path: "./src/notices/notices-faculty.js", prefix: "/bf1/notices" },
 
-
+  { path: "./src/fees/fees-student.js", prefix: "/bs1/fees" },
+  { path: "./src/fees/fees-faculty.js", prefix: "/bf1/fees" },
 
   //utils
 
