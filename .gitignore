@@ -3,3 +3,4 @@ setup.sh
 start.txt
 minio/
 node_modules/
+node.sh

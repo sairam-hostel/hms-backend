@@ -15,6 +15,8 @@ module.exports = [
   { path: "./src/leave-outpass/leave-outpass-faculty.js", prefix: "/bf1/leave-outpass" },
 
 
+  { path: "./src/notices/notices-faculty.js", prefix: "/bf1/notices" },
+  { path: "./src/notices/notices-students.js", prefix: "/bs1/notices" },
 
   { path: "./src/room-management/room-student.js", prefix: "/bs1/rooms" },
   { path: "./src/room-management/room-faculty.js", prefix: "/bf1/rooms" },
@@ -22,8 +24,6 @@ module.exports = [
   { path: "./src/complaints/complaints-students.js", prefix: "/bs1/complaints" },
   { path: "./src/complaints/complaints-faculty.js", prefix: "/bf1/complaints" },
 
-  { path: "./src/notices/notices-students.js", prefix: "/bs1/notices" },
-  { path: "./src/notices/notices-faculty.js", prefix: "/bf1/notices" },
 
   { path: "./src/fees/fees-student.js", prefix: "/bs1/fees" },
   { path: "./src/fees/fees-faculty.js", prefix: "/bf1/fees" },
