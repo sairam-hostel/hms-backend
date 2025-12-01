@@ -8,7 +8,7 @@ const routeDefs = require("./src/common/routes.js");
 const jwt = require("jsonwebtoken");
 
 const app = express();
-
+app.set("etag", "strong");
 // -------------------- Middleware --------------------
 app.use(express.json());
 app.use(
