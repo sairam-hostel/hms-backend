@@ -5,3 +5,7 @@ minio/
 node_modules/
 node.sh
 SaiVps_key.pem
+prod.sh
+server-setup.sh
+minio-setup.sh
+test.sh
