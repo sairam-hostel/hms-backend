@@ -105,6 +105,14 @@ routeDefs.forEach((r) => {
   }
 });
 
+// Health check route
+app.get("/check", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "Server is running",
+    uptime: process.uptime()
+  });
+});
 
 // -------------------------------------------------------------
 // RUN SERVER
