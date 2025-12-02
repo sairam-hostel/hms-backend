@@ -1,12 +1,13 @@
 require("dotenv").config();
 
-const express = require("express");
 const cors = require("cors");
-const { connectDB } = require("./src/common/db");
-const authMiddleware = require("./src/common/middleware");
-const routeDefs = require("./src/common/routes.js");
+const express = require("express");
 const jwt = require("jsonwebtoken");
-
+const { connectDB } = require("./src/common/db");
+const routeDefs = require("./src/common/routes.js");
+const authMiddleware = require("./src/common/middleware");
+const { getStatusPage } = require("./src/common/statuspage.js");
+const serverStart = Date.now();
 const app = express();
 app.set("etag", "strong");
 // -------------------- Middleware --------------------
@@ -105,15 +106,14 @@ routeDefs.forEach((r) => {
   }
 });
 
-// Health check route
-app.get("/check", (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    message: "Server is running",
-    uptime: process.uptime()
-  });
-});
 
+app.get("/a1/status", (req, res) => {
+  const username = process.env.USERNAME || "unknown";
+  // Optionally, pass additional info
+  const html = getStatusPage(username, { nodeVersion: process.version, time: new Date().toISOString() });
+  res.set("Content-Type", "text/html");
+  res.send(html);
+});
 // -------------------------------------------------------------
 // RUN SERVER
 // -------------------------------------------------------------
