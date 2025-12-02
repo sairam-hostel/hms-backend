@@ -74,7 +74,7 @@ function getStatusPage(username, serverInfo = {}) {
     </div>
 
     <div class="footer">
-      <p>&copy; ${new Date().getFullYear()} — Your Service Name</p>
+      <p>&copy; ${new Date().getFullYear()} — MTech Cse (5 Years Integrated)</p>
     </div>
   </div>
 </body>
