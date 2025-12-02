@@ -9,3 +9,4 @@ prod.sh
 server-setup.sh
 minio-setup.sh
 test.sh
+zscripts/
