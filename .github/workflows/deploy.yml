@@ -3,7 +3,7 @@ name: 🚀 Deploy to VPS
 on:
   push:
     branches:
-      - dev  # or your chosen branch
+      - prod  # or your chosen branch
   workflow_dispatch:
 
 jobs:
