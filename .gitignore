@@ -4,3 +4,4 @@ start.txt
 minio/
 node_modules/
 node.sh
+SaiVps_key.pem
