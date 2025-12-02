@@ -1,0 +1,46 @@
+name: 🚀 Deploy to VPS
+
+on:
+  push:
+    branches:
+      - dev  # or your chosen branch
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.VPS_IP }}" >> ~/.ssh/known_hosts
+
+      - name: SSH & deploy via container pull/run
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "Stopping old container (if any)..."
+            docker stop hms_backend || true
+            docker rm hms_backend || true
+            docker image prune -af || true
+
+            echo "Logging into GHCR..."
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+
+            echo "Pulling latest image..."
+            docker pull ghcr.io/sairam-hostel/hms-backend:latest
+
+            echo "Starting new container..."
+            docker run -d \
+              --name hms_backend \
+              -p 8000:8000 \
+              ghcr.io/sairam-hostel/hms-backend:latest
