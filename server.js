@@ -14,10 +14,21 @@ app.set("etag", "strong");
 app.use(express.json());
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: function (origin, callback) {
+      const allowed = process.env.CORS_ORIGIN.split(",").map(o => o.trim());
+
+      if (!origin) return callback(null, true); // allow Postman, backend calls
+
+      if (allowed.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS blocked: " + origin));
+    },
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
 // -------------------------------------------------------------
 // ONE-LINE GLOBAL LOGGER (every API call)
 // -------------------------------------------------------------
