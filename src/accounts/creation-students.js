@@ -149,8 +149,9 @@ const protectedUpdateFields = [
   "verification_expiry", "reset_token", "reset_token_expiry",
   "refresh_tokens", "is_blocked", "failed_attempts",
   "last_failed_attempt", "last_login", "last_ip","profile_img",
-  "created_at", "updated_at"
+  "created_at", "updated_at"  
 ];
+
 // ======================================================================
 // 1. CREATE STUDENT
 // ======================================================================
@@ -161,8 +162,36 @@ router.post("/register", async (req, res) => {
     if (!incoming.name || !incoming.email) {
       return res.status(400).json({ issue: "missing_fields", message: "name and email required" });
     }
-    if (await Student.findOne({ email: incoming.email.toLowerCase() })) {
-      return res.status(409).json({ issue: "email_exists", message: "Email already in use" });
+// ---- UNIQUE FIELD CHECKS ----
+    // 1. Email
+    const existingEmail = await Student.findOne({ email: incoming.email.toLowerCase() });
+    if (existingEmail) {
+      return res.status(409).json({
+        issue: "email_exists",
+        message: "Email already in use"
+      });
+    }
+
+    // 2. Roll number
+    if (incoming.roll_number) {
+      const existingRoll = await Student.findOne({ roll_number: incoming.roll_number });
+      if (existingRoll) {
+        return res.status(409).json({
+          issue: "roll_number_exists",
+          message: "Roll number already in use"
+        });
+      }
+    }
+
+    // 3. Register number
+    if (incoming.register_number) {
+      const existingRegNum = await Student.findOne({ register_number: incoming.register_number });
+      if (existingRegNum) {
+        return res.status(409).json({
+          issue: "register_number_exists",
+          message: "Register number already in use"
+        });
+      }
     }
 
     const data = sanitizeForCreate(incoming);
