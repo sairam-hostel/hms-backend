@@ -119,7 +119,7 @@ routeDefs.forEach((r) => {
 
 
 app.get("/a1/status", (req, res) => {
-  const username = process.env.USERNAME || "unknown";
+  const username = "backend team";
   // Optionally, pass additional info
   const html = getStatusPage(username, { nodeVersion: process.version, time: new Date().toISOString() });
   res.set("Content-Type", "text/html");
