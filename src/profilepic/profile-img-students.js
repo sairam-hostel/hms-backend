@@ -44,6 +44,7 @@ router.get("/view", verify, async (req, res) => {
     return res.status(404).json({ issue: "not_found" });
   }
 
+  
   const url = await signedUrl(stu.profile_image_key);
 
   const response = await axios.get(url, { responseType: "stream" });

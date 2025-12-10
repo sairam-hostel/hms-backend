@@ -10,3 +10,5 @@ server-setup.sh
 minio-setup.sh
 test.sh
 zscripts/
+bins/
+prod.sh.x
