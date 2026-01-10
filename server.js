@@ -99,6 +99,10 @@ function loadSafeRouter(modulePath, prefix) {
 const publicPrefixes = [
   "/bf1/auth",
   "/bs1/auth",
+  "/b1/delete",
+  // "/bf1/accounts/students",
+  // "/bf1/accounts/faculty",
+  
 ];
 
 // -------------------------------------------------------------

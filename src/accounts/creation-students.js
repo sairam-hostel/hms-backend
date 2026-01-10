@@ -41,6 +41,29 @@ const StudentSchemaArray = [
   { key: "batch", type: "String" },
   { key: "profile_image_key", type: "String" },
 
+  //Academic snapshot fields
+  { key: "internal_marks", type: "Number" },        // CIA / Mid-sem
+  { key: "external_marks", type: "Number" },        // End-sem exam
+  { key: "total_marks", type: "Number" },           // Internal + External
+  { key: "percentage", type: "Number" },            // Overall %
+  { key: "attendance_percentage", type: "Number" },  // Attendance %
+
+  { key: "grade", type: "String" },                  // A, B+, etc
+  { key: "gpa", type: "Number" },                    // Semester GPA
+  { key: "cgpa", type: "Number" },                   // Cumulative GPA
+  { key: "result_status", type: "String" },          // PASS / FAIL
+  { key: "academic_status", type: "String" },   
+
+  //Remark fields
+
+  { key: "behavior_rating", type: "Number" },        // 1–5
+  { key: "discipline_rating", type: "Number" },      // 1–5
+  { key: "attitude", type: "String" },               // POSITIVE / NEUTRAL / NEGATIVE
+  { key: "faculty_remark", type: "String" },         // Free-text
+  { key: "trust_level", type: "String" },             // HIGH / MEDIUM / LOW
+
+
+
   // Hostel specific fields 
   { key: "hostel_block", type: "String" },
   { key: "room_number", type: "String" },

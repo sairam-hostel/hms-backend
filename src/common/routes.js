@@ -29,5 +29,5 @@ module.exports = [
 
   //utils
 
-  { path: "./src/common/deleteuser.js", prefix: "/b1/delete-auth" },
+  { path: "./src/common/deleteuser.js", prefix: "/b1/delete" },
 ];

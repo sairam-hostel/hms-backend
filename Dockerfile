@@ -1,5 +1,8 @@
 # Use official Node image (choose stable + small footprint)
-FROM node:24-alpine
+# FROM node:24-alpine
+
+FROM node:20-slim
+
 
 # Set working dir
 WORKDIR /app
