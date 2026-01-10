@@ -11,6 +11,9 @@ module.exports = [
   { path: "./src/profile/profile-students.js", prefix: "/bs1/profile" },
   { path: "./src/profile/profile-faculty.js", prefix: "/bf1/profile" },
 
+  { path: "./src/dashboard/dashboard-faculty.js", prefix: "/bf1/dashboard" },
+  // { path: "./src/dashboard/dashboard-students.js", prefix: "/bs1/dashboard" },
+
   { path: "./src/leave-outpass/leave-outpass-students.js", prefix: "/bs1/leave-outpass" },
   { path: "./src/leave-outpass/leave-outpass-faculty.js", prefix: "/bf1/leave-outpass" },
 
