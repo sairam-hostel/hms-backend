@@ -55,14 +55,11 @@ const StudentSchemaArray = [
   { key: "academic_status", type: "String" },   
 
   //Remark fields
-
   { key: "behavior_rating", type: "Number" },        // 1–5
   { key: "discipline_rating", type: "Number" },      // 1–5
   { key: "attitude", type: "String" },               // POSITIVE / NEUTRAL / NEGATIVE
   { key: "faculty_remark", type: "String" },         // Free-text
   { key: "trust_level", type: "String" },             // HIGH / MEDIUM / LOW
-
-
 
   // Hostel specific fields 
   { key: "hostel_block", type: "String" },
@@ -70,7 +67,7 @@ const StudentSchemaArray = [
   { key: "bed_number", type: "String" },
   { key: "warden_name", type: "String" },
   { key: "floor", type: "Number" },
-
+  
   // Additional fields 
   { key: "gender", type: "String" },
   { key: "dob", type: "Date" },
@@ -78,6 +75,31 @@ const StudentSchemaArray = [
   { key: "nationality", type: "String" },
   { key: "religion", type: "String" },
   { key: "community", type: "String" },
+
+  // Mentor Details
+  { key: "mentor_id", type: "String" },
+  { key: "mentor_name", type: "String" },
+  { key: "mentor_email", type: "String" },
+  { key: "mentor_phone", type: "String" },
+
+  // Class Coordinator Details
+  { key: "class_coordinator_id", type: "String" },
+  { key: "class_coordinator_name", type: "String" },
+  { key: "class_coordinator_email", type: "String" },
+  { key: "class_coordinator_phone", type: "String" },
+
+  // Hod Details
+  { key: "hod_id", type: "String" },
+  { key: "hod_name", type: "String" },
+  { key: "hod_email", type: "String" },
+  { key: "hod_phone", type: "String" },
+  { key: "hod_department", type: "String" },
+
+  // Warden Details
+  { key: "assigned_warden_id", type: "String" },
+  { key: "assigned_warden_phone", type: "String" },
+  { key: "assigned_warden_email", type: "String" },
+  { key: "emergency_contact_priority", type: "String", enum: ["mentor", "coordinator", "hod", "warden"], default: "mentor" },
 
   // Contact fields
   { key: "phone", type: "String" },
@@ -136,16 +158,22 @@ const Student = mongoose.model("Student", StudentSchema);
 
 // 4. HELPERS
 const allowedPublicFields = [
-  "name", "email", "password", "role",
-  "roll_number", "register_number", "department", "year", "section", "batch", "profile_img",
-  "hostel_block", "room_number", "bed_number", "warden_name", "floor",
-  "gender", "dob", "blood_group", "nationality", "religion", "community",
-  "phone", "alternate_phone", "whatsapp_number",
-  "father_name", "father_phone", "mother_name", "mother_phone",
-  "guardian_name", "guardian_phone",
-  "address_line_1", "address_line_2", "city", "state", "pincode", "permanent_address",
-  "school_name", "school_board", "school_percentage",
-  "status"
+  "name", "email", "password",
+  "roll_number","register_number","department","year","section","batch",
+  "profile_image_key",
+  "internal_marks","external_marks","total_marks","percentage","attendance_percentage","grade","gpa","cgpa","result_status","academic_status",
+  "behavior_rating","discipline_rating","attitude","faculty_remark","trust_level",
+  "hostel_block","room_number","bed_number","floor","warden_name","assigned_warden_id","assigned_warden_phone","assigned_warden_email",
+  "mentor_id","mentor_name","mentor_email","mentor_phone",
+  "class_coordinator_id","class_coordinator_name","class_coordinator_email","class_coordinator_phone",
+  "hod_id","hod_name","hod_email","hod_phone","hod_department",
+  "gender","dob","blood_group","nationality","religion","community",
+  "phone","alternate_phone","whatsapp_number",
+  "father_name","father_phone","mother_name","mother_phone","guardian_name","guardian_phone",
+  "address_line_1","address_line_2","city","state","pincode","permanent_address",
+  "school_name","school_board","school_percentage",
+  "status", // in | waiting | out
+  "emergency_contact_priority"
 ];
 
 function sanitizeForCreate(obj) {
@@ -168,11 +196,10 @@ function hiddenProjection() {
 }
 
 const protectedUpdateFields = [
-  "auth_user_id", "email_verified", "verification_code",
-  "verification_expiry", "reset_token", "reset_token_expiry",
-  "refresh_tokens", "is_blocked", "failed_attempts",
-  "last_failed_attempt", "last_login", "last_ip","profile_img",
-  "created_at", "updated_at"  
+  "auth_user_id","role","email_verified",
+  "verification_code","verification_expiry","reset_token","reset_token_expiry","refresh_tokens",
+  "is_blocked","block_reason","failed_attempts","last_failed_attempt","last_login","last_ip",
+  "created_at","updated_at" 
 ];
 
 
@@ -240,37 +267,53 @@ router.post("/register", async (req, res) => {
 });
 
 // ======================================================================
-// 2. GET ALL STUDENTS (WITH FILTERS + SEARCH + PAGINATION)
+// 2. GET ALL STUDENTS (FILTERS + SEARCH + PAGINATION)
 // ======================================================================
 router.get("/", async (req, res) => {
   try {
     const q = {};
 
-    // -------------------------------
-    // BASIC FIELD FILTERS
-    // -------------------------------
+    // ------------------------------------------------
+    // BASIC FILTERS
+    // ------------------------------------------------
     if (req.query.department) q.department = req.query.department;
     if (req.query.year) q.year = req.query.year;
     if (req.query.section) q.section = req.query.section;
     if (req.query.batch) q.batch = req.query.batch;
     if (req.query.hostel_block) q.hostel_block = req.query.hostel_block;
-    if (req.query.status) q.status = req.query.status;  // in / waiting / out
+    if (req.query.status) q.status = req.query.status;
 
-    // -------------------------------
+    // ------------------------------------------------
     // ADVANCED FILTERS
-    // -------------------------------
+    // ------------------------------------------------
     if (req.query.gender) q.gender = req.query.gender;
     if (req.query.city) q.city = req.query.city;
     if (req.query.state) q.state = req.query.state;
 
     if (req.query.room_number) q.room_number = req.query.room_number;
-    if (req.query.floor) q.floor = Number(req.query.floor);
+    if (req.query.floor !== undefined) {
+      const floor = Number(req.query.floor);
+      if (!Number.isNaN(floor)) q.floor = floor;
+    }
 
-    // -------------------------------
-    // TEXT SEARCH
-    // -------------------------------
-    if (req.query.search) {
-      const regex = new RegExp(req.query.search, "i");
+    // ------------------------------------------------
+    // DATE RANGE FILTER (created_at)
+    // ------------------------------------------------
+    if (req.query.created_start || req.query.created_end) {
+      q.created_at = {};
+      if (req.query.created_start) {
+        q.created_at.$gte = new Date(req.query.created_start);
+      }
+      if (req.query.created_end) {
+        q.created_at.$lte = new Date(req.query.created_end);
+      }
+    }
+
+    // ------------------------------------------------
+    // TEXT SEARCH (SAFE)
+    // ------------------------------------------------
+    if (req.query.search && req.query.search.trim() !== "") {
+      const regex = new RegExp(req.query.search.trim(), "i");
 
       q.$or = [
         { name: regex },
@@ -282,52 +325,69 @@ router.get("/", async (req, res) => {
       ];
     }
 
-    // -------------------------------
-    // DATE RANGE FILTERS (created_at)
-    // -------------------------------
-    if (req.query.created_start || req.query.created_end) {
-      q.created_at = {};
-      if (req.query.created_start) q.created_at.$gte = new Date(req.query.created_start);
-      if (req.query.created_end) q.created_at.$lte = new Date(req.query.created_end);
-    }
-
-    // -------------------------------
+    // ------------------------------------------------
     // PAGINATION
-    // -------------------------------
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
+    // ------------------------------------------------
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Number(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
 
-    // -------------------------------
-    // SORTING
-    // -------------------------------
-    const sortField = req.query.sort_by || "created_at";
+    // ------------------------------------------------
+    // SORTING (WHITELISTED)
+    // ------------------------------------------------
+    const allowedSortFields = [
+      "created_at",
+      "name",
+      "roll_number",
+      "department",
+      "year",
+      "cgpa",
+      "attendance_percentage"
+    ];
+
+    const sortBy = allowedSortFields.includes(req.query.sort_by)
+      ? req.query.sort_by
+      : "created_at";
+
     const sortOrder = req.query.sort_order === "asc" ? 1 : -1;
 
-    const list = await Student.find(q)
-      .sort({ [sortField]: sortOrder })
-      .skip(skip)
-      .limit(limit)
-      .select(hiddenProjection());
+    // ------------------------------------------------
+    // QUERY EXECUTION
+    // ------------------------------------------------
+    const [list, total] = await Promise.all([
+      Student.find(q)
+        .sort({ [sortBy]: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .select(hiddenProjection())
+        .lean(),
 
-    const total = await Student.countDocuments(q);
+      Student.countDocuments(q)
+    ]);
 
+    // ------------------------------------------------
+    // RESPONSE
+    // ------------------------------------------------
     return res.json({
       success: true,
       page,
       limit,
       total,
       count: list.length,
-      filters_used: q,
-      data: list,
+      sort_by: sortBy,
+      sort_order: sortOrder === 1 ? "asc" : "desc",
+      data: list
     });
 
   } catch (err) {
     console.error("Student List Error:", err);
-    return res.status(500).json({ issue: "server_error", message: "Internal server error" });
+    return res.status(500).json({
+      success: false,
+      issue: "server_error",
+      message: "Internal server error"
+    });
   }
 });
-
 
 
 // ======================================================================
@@ -426,7 +486,128 @@ router.delete("/:auth_user_id", async (req, res) => {
   }
 });
 
-// EXPORT ROUTER
+// EXPORT ROUTER// ======================================================================
+// 2. GET ALL STUDENTS (FILTERS + SEARCH + PAGINATION)
+// ======================================================================
+router.get("/", async (req, res) => {
+  try {
+    const q = {};
+
+    // ------------------------------------------------
+    // BASIC FILTERS
+    // ------------------------------------------------
+    if (req.query.department) q.department = req.query.department;
+    if (req.query.year) q.year = req.query.year;
+    if (req.query.section) q.section = req.query.section;
+    if (req.query.batch) q.batch = req.query.batch;
+    if (req.query.hostel_block) q.hostel_block = req.query.hostel_block;
+    if (req.query.status) q.status = req.query.status;
+
+    // ------------------------------------------------
+    // ADVANCED FILTERS
+    // ------------------------------------------------
+    if (req.query.gender) q.gender = req.query.gender;
+    if (req.query.city) q.city = req.query.city;
+    if (req.query.state) q.state = req.query.state;
+
+    if (req.query.room_number) q.room_number = req.query.room_number;
+    if (req.query.floor !== undefined) {
+      const floor = Number(req.query.floor);
+      if (!Number.isNaN(floor)) q.floor = floor;
+    }
+
+    // ------------------------------------------------
+    // DATE RANGE FILTER (created_at)
+    // ------------------------------------------------
+    if (req.query.created_start || req.query.created_end) {
+      q.created_at = {};
+      if (req.query.created_start) {
+        q.created_at.$gte = new Date(req.query.created_start);
+      }
+      if (req.query.created_end) {
+        q.created_at.$lte = new Date(req.query.created_end);
+      }
+    }
+
+    // ------------------------------------------------
+    // TEXT SEARCH (SAFE)
+    // ------------------------------------------------
+    if (req.query.search && req.query.search.trim() !== "") {
+      const regex = new RegExp(req.query.search.trim(), "i");
+
+      q.$or = [
+        { name: regex },
+        { roll_number: regex },
+        { register_number: regex },
+        { phone: regex },
+        { father_name: regex },
+        { mother_name: regex }
+      ];
+    }
+
+    // ------------------------------------------------
+    // PAGINATION
+    // ------------------------------------------------
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Number(req.query.limit) || 20, 100);
+    const skip = (page - 1) * limit;
+
+    // ------------------------------------------------
+    // SORTING (WHITELISTED)
+    // ------------------------------------------------
+    const allowedSortFields = [
+      "created_at",
+      "name",
+      "roll_number",
+      "department",
+      "year",
+      "cgpa",
+      "attendance_percentage"
+    ];
+
+    const sortBy = allowedSortFields.includes(req.query.sort_by)
+      ? req.query.sort_by
+      : "created_at";
+
+    const sortOrder = req.query.sort_order === "asc" ? 1 : -1;
+
+    // ------------------------------------------------
+    // QUERY EXECUTION
+    // ------------------------------------------------
+    const [list, total] = await Promise.all([
+      Student.find(q)
+        .sort({ [sortBy]: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .select(hiddenProjection())
+        .lean(),
+
+      Student.countDocuments(q)
+    ]);
+
+    // ------------------------------------------------
+    // RESPONSE
+    // ------------------------------------------------
+    return res.json({
+      success: true,
+      page,
+      limit,
+      total,
+      count: list.length,
+      sort_by: sortBy,
+      sort_order: sortOrder === 1 ? "asc" : "desc",
+      data: list
+    });
+
+  } catch (err) {
+    console.error("Student List Error:", err);
+    return res.status(500).json({
+      success: false,
+      issue: "server_error",
+      message: "Internal server error"
+    });
+  }
+});
 module.exports = {
   Student,
   router
