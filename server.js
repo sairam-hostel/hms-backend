@@ -8,7 +8,10 @@ const routeDefs = require("./src/common/routes.js");
 const authMiddleware = require("./src/common/middleware");
 const { getStatusPage } = require("./src/common/statuspage.js");
 const serverStart = Date.now();
+
+
 const app = express();
+app.use(express.urlencoded({ extended: true }));
 app.set("etag", "strong");
 // -------------------- Middleware --------------------
 app.use(express.json());
@@ -100,6 +103,7 @@ const publicPrefixes = [
   "/bf1/auth",
   "/bs1/auth",
   "/b1/delete",
+  "/bf1/review"
   // "/bf1/accounts/students",
   // "/bf1/accounts/faculty",
   
