@@ -6,24 +6,17 @@ const { Student } = require("../accounts/creation-students");
 const { LeaveOutpass } = require("./leave-outpass-students.js");
 const getMentorReviewHTML = require("../templates/mentor-html.js");
 const hodEmailTemplate = require("../templates/hod-email.js");
-const {
-  successPage,
-  rejectPage,
-  donePage,
-  errorPage
-} = require("../templates/response.js");
-
+const getActionResultHTML = require("../templates/response.js");
 const { sendEmail } = require("../common/mailer");
 
 const router = express.Router();
 // HMAC SECRET (should come from env)
 const APPROVAL_SECRET = process.env.LEAVE_OUTPASS_SECRET_KEYS;
-
 router.get("/mentor", async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) {
-      return res.status(400).send("<p>Error: token is required</p>");
+      return res.status(400).json({ issue: "missing_token" });
     }
 
     const decoded = jwt.verify(token, APPROVAL_SECRET);
@@ -34,80 +27,82 @@ router.get("/mentor", async (req, res) => {
     }).lean();
 
     if (!leave) {
-      return res.status(404).send("<p>Leave request not found</p>");
+      return res.status(404).json({ issue: "not_found" });
     }
 
-    // ✅ Fetch student info using leave.auth_user_id
     const student = await Student.findOne({
       auth_user_id: leave.auth_user_id
     }).lean();
-    const actionUrl = `${process.env.API_BASE_URL }/bf1/review/mentor/respond`;
-    // Pass both leave + student to template
-    const html = getMentorReviewHTML({ leave, student, token, actionUrl });
 
-    res.set("Content-Type", "text/html");
-    res.send(html);
+    return res.json({ leave, student });
 
   } catch (err) {
-    console.error("Mentor review render error:", err);
-    return res.status(401).send("<p>Invalid or expired link</p>");
+    return res.status(401).json({ issue: "invalid_or_expired_token" });
   }
 });
 
 const HOD_PORTAL_URL = process.env.HOD_PORTAL_URL;
 const HOD_TOKEN_EXPIRE = process.env.HOD_TOKEN_EXPIRE;
+const RESPONSE_PORTAL_URL = process.env.HOD_PORTAL_URL;
 router.post("/mentor/respond", async (req, res) => {
   try {
     const { token, action, remarks } = req.body;
 
+    const RESPONSE_URL = process.env.RESPONSE_PORTAL_URL;
+
     // 1️⃣ Token required
     if (!token) {
-      return res.status(400).send(
-        errorPage("Authorization token is missing.")
-      );
+      const t = createResultToken({
+        status: "error",
+        message: "Authorization token missing"
+      });
+      return res.redirect(`${RESPONSE_URL}?token=${t}`);
     }
 
     // 2️⃣ Validate action
     if (!["approved", "rejected"].includes(action)) {
-      return res.status(400).send(
-        errorPage("Invalid action.")
-      );
+      const t = createResultToken({
+        status: "error",
+        message: "Invalid action"
+      });
+      return res.redirect(`${RESPONSE_URL}?token=${t}`);
     }
 
-    // 3️⃣ Verify JWT
+    // 3️⃣ Verify approval JWT
     let decoded;
     try {
       decoded = jwt.verify(token, APPROVAL_SECRET);
     } catch {
-      return res.status(401).send(
-        errorPage("Invalid or expired approval link.")
-      );
+      const t = createResultToken({
+        status: "error",
+        message: "Invalid or expired approval link"
+      });
+      return res.redirect(`${RESPONSE_URL}?token=${t}`);
     }
 
-    // 4️⃣ Fetch leave (LOCK ONLY IF ALREADY APPROVED)
+    // 4️⃣ Fetch leave
+    // 🔒 Lock ONLY if already approved
     const leave = await LeaveOutpass.findOne({
       request_id: decoded.request_id,
       mentor_status: { $ne: "approved" }
     });
 
     if (!leave) {
-      return res.status(410).send(
-        donePage("This request has already been approved.")
-      );
+      const t = createResultToken({
+        status: "done",
+        message: "This request has already been approved"
+      });
+      return res.redirect(`${RESPONSE_URL}?token=${t}`);
     }
 
-    // 5️⃣ Update mentor decision
+    // 5️⃣ Apply mentor decision
     leave.mentor_status = action;
     leave.mentor_note = remarks || null;
     leave.mentor_action_at = new Date();
     leave.updated_at = new Date();
 
-    if (action === "approved") {
-      leave.current_level = "hod";
-    } else {
-      // rejection → student can edit & mentor can act again
-      leave.current_level = "mentor";
-    }
+    // Approved → escalate, Rejected → editable again
+    leave.current_level = action === "approved" ? "hod" : "mentor";
 
     await leave.save();
 
@@ -123,14 +118,18 @@ router.post("/mentor/respond", async (req, res) => {
           role: "hod",
           email: leave.hod_email
         },
-        APPROVAL_SECRET
+        APPROVAL_SECRET,
+        process.env.HOD_TOKEN_EXPIRE &&
+          process.env.HOD_TOKEN_EXPIRE !== "none"
+          ? { expiresIn: process.env.HOD_TOKEN_EXPIRE }
+          : undefined
       );
 
       const approvalLink = `${HOD_PORTAL_URL}?token=${hodToken}`;
 
       await sendEmail({
         to: leave.hod_email,
-        subject: "Leave / Outpass Pending Your Approval",
+        subject: "Leave / Outpass Approval Pending",
         html: hodEmailTemplate({
           hodName: leave.hod_name,
           studentName: student?.name || "Student",
@@ -141,26 +140,88 @@ router.post("/mentor/respond", async (req, res) => {
         })
       });
 
-      return res.send(
-        successPage(
-          "You have approved the request. It has been forwarded to the HOD."
-        )
-      );
+      const t = createResultToken({
+        status: "success",
+        message: "You have approved the request. It has been forwarded to the HOD."
+      });
+
+      return res.redirect(`${RESPONSE_URL}?token=${t}`);
     }
 
-    // 7️⃣ Reject page
-    return res.send(
-      rejectPage(
-        "You have rejected this request. The student may modify and resubmit."
-      )
-    );
+    // 7️⃣ Rejected → student can edit & resubmit
+    const t = createResultToken({
+      status: "rejected",
+      message: "You have rejected this request. The student may modify and resubmit."
+    });
+
+    return res.redirect(`${RESPONSE_URL}?token=${t}`);
 
   } catch (err) {
     console.error("Mentor respond error →", err);
-    return res.status(500).send(
-      errorPage("Something went wrong. Please try again.")
+
+    const t = createResultToken({
+      status: "error",
+      message: "Something went wrong. Please try again."
+    });
+
+    return res.redirect(
+      `${process.env.RESPONSE_PORTAL_URL}?token=${t}`
     );
   }
 });
+
+
+
+
+//PAGES
+
+router.get("/mentor-page", (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).send("Token required");
+
+  const html = getMentorReviewHTML({
+    token,
+    actionUrl: "/bf1/review/mentor/respond"
+  });
+
+  res.set("Content-Type", "text/html");
+  res.send(html);
+});
+
+
+
+router.get("/action-result", (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return res.status(400).send("Invalid link");
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, APPROVAL_SECRET);
+  } catch {
+    return res.status(401).send("Invalid or expired result link");
+  }
+
+  const html = getActionResultHTML({
+    status: decoded.status,
+    message: decoded.message
+  });
+
+  res.set("Content-Type", "text/html");
+  res.send(html);
+});
+
+function createResultToken(payload) {
+  return jwt.sign(
+    payload,
+    APPROVAL_SECRET,
+          process.env.RESULT_TOKEN_EXPIRE !== "none"
+          ? { expiresIn: process.env.RESULT_TOKEN_EXPIRE }
+          : undefined
+  );
+}
+
 
 module.exports = { router };
