@@ -5,16 +5,12 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 
-// ===============================================================
-// 1. LEAVE / OUTPASS SCHEMA ARRAY  (Highly detailed)
-// ===============================================================
 const LeaveOutpassSchemaArray = [
   // ==========================================================
   // IDENTIFIERS
   // ==========================================================
-  { key: "request_id", type: "String", required: true, unique: true }, 
-  { key: "auth_user_id", type: "String", required: true },            // student
-  { key: "faculty_reviewer_id", type: "String" },                     // faculty approving
+  { key: "request_id", type: "String", required: true, unique: true },
+  { key: "auth_user_id", type: "String", required: true }, // student
 
   // ==========================================================
   // REQUEST TYPE
@@ -30,6 +26,15 @@ const LeaveOutpassSchemaArray = [
   { key: "mode_of_transport", type: "String" },
 
   // ==========================================================
+  // PICKUP PERSON DETAILS (FOR GIRLS)
+  // ==========================================================
+  { key: "pickup_person_name", type: "String" },
+  { key: "pickup_person_relation", type: "String" },   // Father / Brother / Guardian / etc
+  { key: "pickup_person_phone", type: "String" },
+  { key: "pickup_person_id_type", type: "String" },    // Aadhaar / DL / Passport
+  { key: "pickup_person_id_number", type: "String" },
+
+  // ==========================================================
   // DATE & TIME
   // ==========================================================
   { key: "from_date", type: "Date" },
@@ -38,39 +43,70 @@ const LeaveOutpassSchemaArray = [
   { key: "expected_in_time", type: "String" },
 
   // ==========================================================
-  // CONTACT DETAILS
+  // APPROVAL FLOW (LINEAR)
   // ==========================================================
-  { key: "parent_phone", type: "String" },
-  { key: "guardian_phone", type: "String" },
-  { key: "local_guardian_name", type: "String" },
-  { key: "local_guardian_phone", type: "String" },
+  { key: "current_level", type: "String", enum: ["mentor", "hod", "admin", "completed"], default: "mentor" },
 
-  // ==========================================================
-  // APPROVAL FLOW & STATUS
-  // ==========================================================
-  { key: "status", type: "String", enum: ["pending", "approved", "rejected", "cancelled", "completed", "overdue"], default: "pending" },
-  { key: "faculty_note", type: "String" },
+  // Mentor
+  { key: "mentor_name", type: "String" },
+  { key: "mentor_email", type: "String" },
+  { key: "mentor_phone", type: "String" },
+  { key: "mentor_status", type: "String", enum: ["pending", "approved", "rejected"], default: "pending" },
+  { key: "mentor_note", type: "String" },
+  { key: "mentor_action_at", type: "Date" },
+
+  // HOD
+  { key: "hod_name", type: "String" },
+  { key: "hod_email", type: "String" },
+  { key: "hod_phone", type: "String" },
+  { key: "hod_status", type: "String", enum: ["pending", "approved", "rejected"], default: "pending" },
+  { key: "hod_note", type: "String" },
+  { key: "hod_action_at", type: "Date" },
+
+  // Admin
+  { key: "admin", type: "String" },
+  { key: "admin_email", type: "String" },
+  { key: "admin_phone", type: "String" },
+  { key: "admin_status", type: "String", enum: ["pending", "approved", "rejected"], default: "pending" },
   { key: "admin_note", type: "String" },
-  { key: "approved_at", type: "Date" },
-  { key: "rejected_at", type: "Date" },
-  { key: "location_status", type: "String",enum: ["outside", "inside"], default: "inside" },
+  { key: "admin_action_at", type: "Date" },
 
   // ==========================================================
-  // QR / BARCODE SECURITY
+  // FINAL STATUS (DERIVED)
   // ==========================================================
-  { key: "qr_payload", type: "String" },      // base64
-  { key: "qr_signature", type: "String" },    // HMAC SHA256
-  { key: "qr_generated_at", type: "Date" },
+  {
+    key: "status",
+    type: "String",
+    enum: ["pending", "approved", "rejected", "cancelled", "completed"],
+    default: "pending"
+  },
 
   // ==========================================================
-  // GATE LOGS (OUT & IN)
+  // LOCATION TRACKING
+  // ==========================================================
+  {
+    key: "location_status",
+    type: "String",
+    enum: ["inside", "outside"],
+    default: "inside"
+  },
+  // ==========================================================
+  // LATE / NO RETURN TRACKING
+  // ==========================================================
+  { key: "is_gate_in_missed", type: "Boolean", default: false }, // true if not returned on time
+  { key: "gate_in_missed_reason", type: "String" },              // explanation (optional)
+  { key: "marked_missed_at", type: "Date" },                     // when system/admin marked it
+  { key: "escalation_level", type: "String", enum: ["none", "mentor", "hod", "admin"], default: "none" },
+
+  // ==========================================================
+  // GATE LOGS
   // ==========================================================
   { key: "gate_out_time", type: "Date" },
   { key: "gate_in_time", type: "Date" },
-  { key: "gate_verified_by", type: "String" }, // security staff ID
+  { key: "gate_verified_by", type: "String" },
 
   // ==========================================================
-  // AUDIT TRAIL
+  // AUDIT
   // ==========================================================
   { key: "action_history", type: "Array", default: [] },
 
@@ -80,7 +116,6 @@ const LeaveOutpassSchemaArray = [
   { key: "created_at", type: "Date", default: "Date.now" },
   { key: "updated_at", type: "Date", default: "Date.now" }
 ];
-
 
 // ===============================================================
 // 2. TYPE MAP
@@ -125,12 +160,12 @@ const LeaveOutpass = mongoose.model("LeaveOutpass", LeaveOutpassSchema);
 // 5. HELPERS (SAME STYLE AS FACULTY)
 // ===============================================================
 const allowedPublicFields = [
-  "type", "request_reason", "place_to_visit", "address_details",
-  "mode_of_transport", "from_date", "to_date", "return_date",
-  "expected_in_time", "parent_phone", "guardian_phone",
-  "local_guardian_name", "local_guardian_phone"
+  // Request basics
+  "type","request_reason","place_to_visit","address_details",
+  "mode_of_transport", "from_date","to_date","return_date",
+  "expected_in_time", "pickup_person_name", "pickup_person_relation",
+  "pickup_person_phone","pickup_person_id_type","pickup_person_id_number"
 ];
-
 function sanitizeForCreate(obj) {
   const out = {};
   Object.keys(obj || {}).forEach(k => {
@@ -141,49 +176,164 @@ function sanitizeForCreate(obj) {
 
 function hiddenProjection() {
   return {
-    otp_code: 0,
-    reset_token: 0
+    auth_user_id: 0,
+    mentor_id: 0, mentor_note: 0,
+    hod_id: 0, hod_note: 0,
+    admin_id: 0, admin_note: 0,
+    gate_verified_by: 0, qr_payload: 0, qr_signature: 0,
+    action_history: 0
   };
 }
 
-// Fields student cannot manually update
+
 const protectedUpdateFields = [
-  "auth_user_id", "faculty_reviewer_id", "status", "request_id",
-  "qr_payload", "qr_signature", "qr_generated_at",
-  "gate_out_time", "gate_in_time", "action_history",
-  "approved_at", "rejected_at", "created_at", "updated_at"
+  // Core identifiers
+  "auth_user_id",
+  "request_id",
+
+  // Workflow control
+  "current_level",
+  "status",
+
+  // Mentor fields
+  "mentor_id","mentor_status","mentor_note","mentor_action_at",
+  "hod_id","hod_status","hod_note","hod_action_at",
+  "admin_id","admin_status","admin_note","admin_action_at","qr_payload",
+  "qr_signature","qr_generated_at","gate_out_time","gate_in_time",
+  "gate_verified_by","location_status","is_gate_in_missed",
+  "gate_in_missed_reason","marked_missed_at","escalation_level",
+  "action_history","created_at","updated_at"
 ];
 
 
-
-
 /* ============================================================
-   1. CREATE LEAVE/OUTPASS REQUEST (STUDENT)
+   CREATE LEAVE / OUTPASS REQUEST (STUDENT)
    ============================================================ */
 router.post("/request", async (req, res) => {
   try {
     const userId = req.user?.auth_user_id;
     if (!userId) {
-      return res.status(401).json({ issue: "unauthorized", message: "Invalid token" });
+      return res.status(401).json({
+        issue: "unauthorized",
+        message: "Invalid token"
+      });
     }
 
+    // 1️⃣ Fetch student (single source of truth)
+    const student = await Student.findOne({ auth_user_id: userId }).lean();
+    if (!student) {
+      return res.status(404).json({
+        issue: "not_found",
+        message: "Student not found"
+      });
+    }
+
+    // 2️⃣ Pick only allowed public fields
     const data = sanitizeForCreate(req.body);
 
+    // 3️⃣ Validate mandatory request fields (NOT in student DS)
+    const requiredFields = [
+      "type",
+      "from_date",
+      "expected_in_time",
+      "request_reason",
+      "place_to_visit",
+      "address_details",
+      "mode_of_transport"
+    ];
+
+    const missing = requiredFields.filter(f => !data[f]);
+    if (missing.length > 0) {
+      return res.status(400).json({
+        issue: "validation_error",
+        message: "Missing required request fields",
+        missing_fields: missing
+      });
+    }
+
+    // 4️⃣ Female pickup validation (gender comes from student DS)
+    if (student.gender === "female") {
+      const pickupRequired = [
+        "pickup_person_name",
+        "pickup_person_relation",
+        "pickup_person_phone"
+      ];
+
+      const pickupMissing = pickupRequired.filter(f => !data[f]);
+      if (pickupMissing.length > 0) {
+        return res.status(400).json({
+          issue: "validation_error",
+          message: "Pickup person details are mandatory for female students",
+          missing_fields: pickupMissing
+        });
+      }
+    }
+
+    // 5️⃣ Core identifiers
     data.request_id = crypto.randomUUID();
     data.auth_user_id = userId;
+
+    // 6️⃣ Approval flow initialization
+    data.current_level = "mentor";
     data.status = "pending";
+
+    // 7️⃣ Snapshot authorities FROM STUDENT DS
+    data.mentor_name = student.mentor_name || null;
+    data.mentor_email = student.mentor_email || null;
+    data.mentor_phone = student.mentor_phone || null;
+    data.mentor_status = "pending";
+
+    data.hod_name = student.hod_name || null;
+    data.hod_email = student.hod_email || null;
+    data.hod_phone = student.hod_phone || null;
+    data.hod_status = "pending";
+
+    data.admin = "admin";
+    data.admin_email = process.env.ADMIN_EMAIL || null;
+    data.admin_phone = process.env.ADMIN_PHONE || null;
+    data.admin_status = "pending";
+
+    // 8️⃣ Snapshot emergency contacts FROM STUDENT DS
+    data.parent_phone =
+      student.father_phone || student.mother_phone || null;
+
+    data.guardian_phone = student.guardian_phone || null;
+
+    data.class_coordinator_name = student.class_coordinator_name || null;
+    data.class_coordinator_email = student.class_coordinator_email || null;
+    data.class_coordinator_phone = student.class_coordinator_phone || null;
+
+    data.warden_email = student.assigned_warden_email || null;
+    data.warden_phone = student.assigned_warden_phone || null;
+
+    // 9️⃣ Tracking defaults
+    data.location_status = "inside";
+    data.is_gate_in_missed = false;
+    data.escalation_level = "none";
+
+    // 🔟 Metadata
     data.created_at = Date.now();
     data.updated_at = Date.now();
 
+    // 1️⃣1️⃣ Create document
     const doc = await LeaveOutpass.create(data);
 
-    return res.json({ success: true, message: "Request submitted", data: doc });
+    return res.json({
+      success: true,
+      message: "Leave / Outpass request submitted successfully",
+      data: doc
+    });
 
   } catch (err) {
     console.error("Leave/Create Error →", err);
-    return res.status(500).json({ issue: "server_error", message: "Something went wrong" });
+    return res.status(500).json({
+      issue: "server_error",
+      message: "Something went wrong"
+    });
   }
 });
+
+
 /* ============================================================
    2. GET ALL REQUESTS BY STUDENT (WITH FILTERS)
    ============================================================ */
