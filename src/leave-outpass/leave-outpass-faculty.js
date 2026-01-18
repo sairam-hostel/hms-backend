@@ -1,13 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const crypto = require("crypto");
+
 const { LeaveOutpass } = require("./leave-outpass-students");   // model import
-const mentorEmailTemplate = require("../templates/mentor-html.js")
-// HMAC SECRET (should come from env)
-const APPROVAL_SECRET = process.env.LEAVE_OUTPASS_SECRET_KEYS;
-
-
-
+const Faculty = require("../accounts/creation-faculty").Faculty;
 
 // ======================================================================
 // ADMIN: GET LEAVE / OUTPASS REQUESTS (ALL NON-SYSTEM FILTERS)
@@ -102,118 +98,129 @@ router.get("/", async (req, res) => {
   }
 });
 
+// ======================================================================
+// ADMIN: APPROVE REQUEST (FACULTY-SOURCE LOGGING)
+// ======================================================================
+router.patch("/:request_id/approve", async (req, res) => {
+  try {
+    const adminAuthId = req.user?.auth_user_id;
+
+    // 1️⃣ Fetch admin faculty record
+    const admin = await Faculty.findOne({
+      auth_user_id: adminAuthId,
+      role: "admin",
+      is_blocked: false
+    }).lean();
+
+    if (!admin) {
+      return res.status(403).json({ issue: "unauthorized_admin" });
+    }
+
+    // 2️⃣ Fetch leave request
+    const doc = await LeaveOutpass.findOne({
+      request_id: req.params.request_id
+    });
+
+    if (!doc) {
+      return res.status(404).json({ issue: "not_found" });
+    }
+
+    if (doc.current_level !== "admin" || doc.admin_status !== "pending") {
+      return res.status(403).json({ issue: "not_actionable" });
+    }
+
+    // 3️⃣ Optional date edits
+    const { from_date, to_date, return_date, admin_note } = req.body;
+    if (from_date) doc.from_date = new Date(from_date);
+    if (to_date) doc.to_date = new Date(to_date);
+    if (return_date) doc.return_date = new Date(return_date);
+
+    // 4️⃣ Log admin snapshot (FROM FACULTY)
+    doc.admin = admin.auth_user_id;
+    doc.admin_name = admin.name;
+    doc.admin_email = admin.email;
+    doc.admin_phone = admin.phone || null;
+
+    // 5️⃣ Apply approval
+    doc.admin_status = "approved";
+    doc.admin_note = admin_note || "Approved";
+    doc.admin_action_at = new Date();
+
+    doc.current_level = "completed";
+    doc.status = "approved";
+    doc.updated_at = new Date();
+
+    await doc.save();
+
+    return res.json({
+      success: true,
+      message: "Request approved successfully."
+    });
+
+  } catch (err) {
+    console.error("ADMIN APPROVE Error:", err);
+    return res.status(500).json({ issue: "server_error" });
+  }
+});
+
+// ======================================================================
+// ADMIN: REJECT REQUEST (FACULTY-SOURCE LOGGING)
+// ======================================================================
+router.patch("/:request_id/reject", async (req, res) => {
+  try {
+    const adminAuthId = req.user?.auth_user_id;
+
+    const admin = await Faculty.findOne({
+      auth_user_id: adminAuthId,
+      role: "admin",
+      is_blocked: false
+    }).lean();
+
+    if (!admin) {
+      return res.status(403).json({ issue: "unauthorized_admin" });
+    }
+
+    const doc = await LeaveOutpass.findOne({
+      request_id: req.params.request_id
+    });
+
+    if (!doc) {
+      return res.status(404).json({ issue: "not_found" });
+    }
+
+    if (doc.current_level !== "admin" || doc.admin_status !== "pending") {
+      return res.status(403).json({ issue: "not_actionable" });
+    }
+
+    // Log admin snapshot
+    doc.admin = admin.auth_user_id;
+    doc.admin_email = admin.email;
+    doc.admin_phone = admin.phone || null;
+
+    // Apply rejection
+    doc.admin_status = "rejected";
+    doc.admin_note = req.body.admin_note || "Rejected";
+    doc.admin_action_at = new Date();
+
+    doc.status = "rejected";
+    doc.current_level = "admin";
+    doc.updated_at = new Date();
+
+    await doc.save();
+
+    return res.json({
+      success: true,
+      message: "Request rejected."
+    });
+
+  } catch (err) {
+    console.error("ADMIN REJECT Error:", err);
+    return res.status(500).json({ issue: "server_error" });
+  }
+});
 
 
 
-// // ======================================================================
-// // 3. GET INDIVIDUAL REQUEST
-// // ======================================================================
-// router.get("/:request_id", async (req, res) => {
-//   try {
-//     const doc = await LeaveOutpass.findOne({
-//       request_id: req.params.request_id
-//     });
-
-//     if (!doc) return res.status(404).json({ issue: "not_found" });
-
-//     return res.json({ success: true, data: doc });
-
-//   } catch (err) {
-//     console.error("Faculty GET ONE Error:", err);
-//     return res.status(500).json({ issue: "server_error" });
-//   }
-// });
-
-
-
-// // ======================================================================
-// // 4. APPROVE REQUEST (faculty action)
-// // ======================================================================
-// router.patch("/:request_id/approve", async (req, res) => {
-//   try {
-//     const facultyId = req.user?.auth_user_id;
-//     const doc = await LeaveOutpass.findOne({ request_id: req.params.request_id });
-
-//     if (!doc) return res.status(404).json({ issue: "not_found" });
-//     if (doc.status !== "pending") {
-//       return res.status(403).json({ issue: "not_pending" });
-//     }
-
-//     // faculty can modify dates
-//     const { from_date, to_date, return_date, faculty_note } = req.body;
-//     if (from_date) doc.from_date = from_date;
-//     if (to_date) doc.to_date = to_date;
-//     if (return_date) doc.return_date = return_date;
-
-//     doc.status = "approved";
-//     doc.faculty_reviewer_id = facultyId;
-//     doc.faculty_note = faculty_note || "Approved";
-//     doc.approved_at = Date.now();
-
-//     // Generate QR now
-//     const { base64Payload, signature } = generateQR(doc);
-//     doc.qr_payload = base64Payload;
-//     doc.qr_signature = signature;
-//     doc.qr_generated_at = Date.now();
-
-//     doc.action_history.push({
-//       action: "approved",
-//       actor: facultyId,
-//       timestamp: Date.now(),
-//       note: doc.faculty_note
-//     });
-
-//     await doc.save();
-
-//     return res.json({
-//       success: true,
-//       message: "Request Approved. QR generated.",
-//       qr_payload: doc.qr_payload,
-//       qr_signature: doc.qr_signature
-//     });
-
-//   } catch (err) {
-//     console.error("APPROVE Error:", err);
-//     return res.status(500).json({ issue: "server_error" });
-//   }
-// });
-
-
-
-// // ======================================================================
-// // 5. REJECT REQUEST
-// // ======================================================================
-// router.patch("/:request_id/reject", async (req, res) => {
-//   try {
-//     const facultyId = req.user?.auth_user_id;
-//     const doc = await LeaveOutpass.findOne({ request_id: req.params.request_id });
-
-//     if (!doc) return res.status(404).json({ issue: "not_found" });
-//     if (doc.status !== "pending") {
-//       return res.status(403).json({ issue: "not_pending" });
-//     }
-
-//     doc.status = "rejected";
-//     doc.faculty_reviewer_id = facultyId;
-//     doc.faculty_note = req.body.faculty_note || "Rejected";
-//     doc.rejected_at = Date.now();
-
-//     doc.action_history.push({
-//       action: "rejected",
-//       actor: facultyId,
-//       timestamp: Date.now(),
-//       note: doc.faculty_note
-//     });
-
-//     await doc.save();
-
-//     return res.json({ success: true, message: "Request rejected." });
-
-//   } catch (err) {
-//     console.error("REJECT Error:", err);
-//     return res.status(500).json({ issue: "server_error" });
-//   }
-// });
 
 // // ======================================================================
 // // 6. GATE OUT (student leaves campus)

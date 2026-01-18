@@ -60,6 +60,7 @@ const LeaveOutpassSchemaArray = [
 
   // ================= admin =================
   { key: "admin", type: "String" },
+  { key: "admin_name", type: "String" },
   { key: "admin_email", type: "String" },
   { key: "admin_phone", type: "String" },
   { key: "admin_status", type: "String", enum: ["pending", "approved", "rejected"], default: "pending" },
@@ -298,6 +299,7 @@ router.post("/request", async (req, res) => {
     data.hod_status = "pending";
 
     data.admin = "admin";
+    data.hod_name = null;
     data.admin_email = process.env.ADMIN_EMAIL || null;
     data.admin_phone = process.env.ADMIN_PHONE || null;
     data.admin_status = "pending";

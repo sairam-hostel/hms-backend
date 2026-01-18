@@ -192,7 +192,9 @@ router.post("/register", async (req, res) => {
   try {
     const incoming = req.body || {};
 
-    // Basic required checks
+    // ==========================================================
+    // 1️⃣ BASIC REQUIRED CHECKS
+    // ==========================================================
     if (!incoming.name || !incoming.email) {
       return res.status(400).json({
         issue: "missing_fields",
@@ -200,14 +202,22 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Enforce role presence (allow default)
+    // ==========================================================
+    // 2️⃣ ROLE VALIDATION (DEFAULT = faculty)
+    // ==========================================================
     const role = incoming.role || "faculty";
     if (!["faculty", "warden", "admin"].includes(role)) {
-      return res.status(400).json({ issue: "invalid_role", message: "Invalid role provided." });
+      return res.status(400).json({
+        issue: "invalid_role",
+        message: "Invalid role provided."
+      });
     }
 
-    // Check uniqueness
-    const exists = await Faculty.findOne({ email: incoming.email.toLowerCase() });
+    // ==========================================================
+    // 3️⃣ EMAIL UNIQUENESS CHECK
+    // ==========================================================
+    const email = incoming.email.toLowerCase();
+    const exists = await Faculty.findOne({ email });
     if (exists) {
       return res.status(409).json({
         issue: "email_exists",
@@ -215,26 +225,47 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // sanitize body so clients cannot set internal fields
+    // ==========================================================
+    // 4️⃣ SANITIZE INPUT (CRITICAL)
+    // ==========================================================
+    // Must strip internal/system-controlled fields
     const data = sanitizeForCreate(incoming);
 
-    // set role explicitly
+    // ==========================================================
+    // 5️⃣ SET AUTH + ROLE FIELDS
+    // ==========================================================
     data.role = role;
+    data.email = email;
 
-    // set default password if not provided
+    // Password (default if missing)
     const rawPassword = data.password || "sairam@123";
     data.password = await bcrypt.hash(rawPassword, 10);
 
-    // generate internal identifiers & verification
-    data.auth_user_id = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
-    data.email_verified = true;
+    // ==========================================================
+    // 6️⃣ INTERNAL IDENTIFIERS & SECURITY DEFAULTS
+    // ==========================================================
+    data.auth_user_id =
+      crypto.randomUUID?.() ||
+      crypto.randomBytes(16).toString("hex");
+
+    data.email_verified = true; // since created by admin
+    data.is_blocked = false;
+    data.failed_attempts = 0;
+    data.refresh_tokens = [];
+
+    // Email verification metadata (kept for consistency)
     data.verification_code = generate6Digit();
-    data.verification_expiry = Date.now() + (10 * 60 * 1000); // 10 minutes from now
+    data.verification_expiry = new Date(Date.now() + 10 * 60 * 1000);
 
-    // ensure metadata
-    data.created_at = Date.now();
-    data.updated_at = Date.now();
+    // ==========================================================
+    // 7️⃣ METADATA
+    // ==========================================================
+    data.created_at = new Date();
+    data.updated_at = new Date();
 
+    // ==========================================================
+    // 8️⃣ CREATE FACULTY
+    // ==========================================================
     const faculty = await Faculty.create(data);
 
     return res.json({
@@ -253,7 +284,10 @@ router.post("/register", async (req, res) => {
 
   } catch (err) {
     console.error("Faculty Register Error:", err);
-    return res.status(500).json({ issue: "server_error", message: "Internal server error." });
+    return res.status(500).json({
+      issue: "server_error",
+      message: "Internal server error."
+    });
   }
 });
 
