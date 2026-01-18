@@ -2,8 +2,6 @@ function hodEmailTemplate({
   hodName,
   studentName,
   leaveType,
-  fromDate,
-  toDate,
   approvalLink
 }) {
   return `
@@ -36,8 +34,6 @@ function hodEmailTemplate({
 
   <p>
     <strong>Type:</strong> ${leaveType}<br>
-    <strong>From:</strong> ${fromDate}<br>
-    <strong>To:</strong> ${toDate}
   </p>
 
   <p>

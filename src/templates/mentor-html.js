@@ -83,7 +83,7 @@ function getMentorReviewHTML({ token, actionUrl }) {
 
 <body>
 <div class="container">
-  <h1>Leave / Outpass Request Review</h1>
+  <h1>Leave / Outpass Request Mentor Review</h1>
 
   <div id="content">Loading details…</div>
 

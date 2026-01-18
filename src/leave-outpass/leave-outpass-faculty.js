@@ -6,112 +6,102 @@ const mentorEmailTemplate = require("../templates/mentor-html.js")
 // HMAC SECRET (should come from env)
 const APPROVAL_SECRET = process.env.LEAVE_OUTPASS_SECRET_KEYS;
 
-router.get("/mentor", async (req, res) => {
+
+
+
+// ======================================================================
+// ADMIN: GET LEAVE / OUTPASS REQUESTS (ALL NON-SYSTEM FILTERS)
+// ======================================================================
+router.get("/", async (req, res) => {
   try {
-    const { token } = req.query;
-    if (!token) {
-      return res.status(400).send("<p>Error: token is required</p>");
+    const q = {};
+
+    // ================= IDENTIFIERS =================
+    if (req.query.request_id) q.request_id = req.query.request_id;
+    if (req.query.auth_user_id) q.auth_user_id = req.query.auth_user_id;
+
+    // ================= REQUEST CORE =================
+    if (req.query.type) q.type = req.query.type; // leave | outpass
+    if (req.query.status) q.status = req.query.status;
+    if (req.query.current_level) q.current_level = req.query.current_level;
+
+    // ================= APPROVAL STATES =================
+    if (req.query.mentor_status) q.mentor_status = req.query.mentor_status;
+    if (req.query.hod_status) q.hod_status = req.query.hod_status;
+    if (req.query.admin_status) q.admin_status = req.query.admin_status;
+
+    // ================= AUTHORITIES =================
+    if (req.query.mentor_email) q.mentor_email = req.query.mentor_email;
+    if (req.query.hod_email) q.hod_email = req.query.hod_email;
+    if (req.query.admin_email) q.admin_email = req.query.admin_email;
+
+    // ================= REQUEST DETAILS =================
+    if (req.query.mode_of_transport) q.mode_of_transport = req.query.mode_of_transport;
+
+    // ================= PICKUP PERSON =================
+    if (req.query.pickup_person_name) q.pickup_person_name = req.query.pickup_person_name;
+    if (req.query.pickup_person_relation) q.pickup_person_relation = req.query.pickup_person_relation;
+    if (req.query.pickup_person_phone) q.pickup_person_phone = req.query.pickup_person_phone;
+    if (req.query.pickup_person_id_type) q.pickup_person_id_type = req.query.pickup_person_id_type;
+
+    // ================= LOCATION & GATE =================
+    if (req.query.location_status) q.location_status = req.query.location_status;
+    if (req.query.escalation_level) q.escalation_level = req.query.escalation_level;
+    if (req.query.is_gate_in_missed !== undefined) {
+      q.is_gate_in_missed = req.query.is_gate_in_missed === "true";
     }
 
-    const decoded = jwt.verify(token, APPROVAL_SECRET);
-
-    const leave = await LeaveOutpass.findOne({
-      request_id: decoded.request_id,
-      mentor_email: decoded.email
-    }).lean();
-
-    if (!leave) {
-      return res.status(404).send("<p>Leave request not found</p>");
+    // ================= DATE FILTERS =================
+    if (req.query.from_date) {
+      q.from_date = { $gte: new Date(req.query.from_date) };
     }
 
-    const html = getMentorReviewHTML({ leave, token });
+    if (req.query.to_date) {
+      q.to_date = { $lte: new Date(req.query.to_date) };
+    }
 
-    res.set("Content-Type", "text/html");
-    res.send(html);
+    if (req.query.return_date) {
+      q.return_date = new Date(req.query.return_date);
+    }
+
+    if (req.query.created_from || req.query.created_to) {
+      q.created_at = {};
+      if (req.query.created_from) {
+        q.created_at.$gte = new Date(req.query.created_from);
+      }
+      if (req.query.created_to) {
+        q.created_at.$lte = new Date(req.query.created_to);
+      }
+    }
+
+    // ================= SAFE TEXT SEARCH =================
+    if (req.query.search) {
+      const r = new RegExp(req.query.search, "i");
+      q.$or = [
+        { request_reason: r },
+        { place_to_visit: r },
+        { address_details: r }
+      ];
+    }
+
+    const list = await LeaveOutpass
+      .find(q)
+      .sort({ created_at: -1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      filters_applied: Object.keys(q),
+      count: list.length,
+      data: list
+    });
 
   } catch (err) {
-    console.error("Mentor review render error:", err);
-    return res.status(401).send("<p>Invalid or expired link</p>");
+    console.error("Admin GET Error:", err);
+    return res.status(500).json({ issue: "server_error" });
   }
 });
 
-export default router;
-// // ======================================================================
-// // 1. Utility: Generate QR payload + HMAC signature
-// // ======================================================================
-// function generateQR(doc) {
-//   const payload = {
-//     req: doc.request_id,
-//     uid: doc.auth_user_id,
-//     ts: Date.now()
-//   };
-
-//   const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
-
-//   const signature = crypto
-//     .createHmac("sha256", QR_SECRET)
-//     .update(base64Payload)
-//     .digest("hex");
-
-//   return { base64Payload, signature };
-// }
-
-
-// function validateQR(qr_payload, qr_signature) {
-//   const expectedSig = crypto
-//     .createHmac("sha256", process.env.QR_SECRET)
-//     .update(qr_payload)
-//     .digest("hex");
-
-//   return expectedSig === qr_signature;
-// }
-
-// // Hide sensitive fields
-// function hiddenProjection() {
-//   return {
-//     qr_signature: 0
-//   };
-// }
-
-// // Helper: check inside/outside status
-// function computeStatus(doc) {
-//   if (doc.gate_out_time && !doc.gate_in_time) return "outside";
-//   if (doc.gate_in_time) return "inside";
-//   return "not_left_yet";
-// }
-
-
-// // ======================================================================
-// // 2. GET ALL REQUESTS (with filters)
-// // ======================================================================
-// router.get("/", async (req, res) => {
-//   try {
-//     const q = {};
-
-//     // filters
-//     if (req.query.type) q.type = req.query.type;                             // leave | outpass
-//     if (req.query.status) q.status = req.query.status;                       // pending | approved
-//     if (req.query.auth_user_id) q.auth_user_id = req.query.auth_user_id;     // filter student
-//     if (req.query.hostel_block) q.hostel_block = req.query.hostel_block;
-
-//     // date filter
-//     if (req.query.from_date) {
-//       q.from_date = { $gte: new Date(req.query.from_date) };
-//     }
-
-//     const list = await LeaveOutpass.find(q).sort({ created_at: -1 });
-
-//     return res.json({
-//       success: true,
-//       count: list.length,
-//       data: list
-//     });
-
-//   } catch (err) {
-//     console.error("Faculty GET ALL Error:", err);
-//     return res.status(500).json({ issue: "server_error" });
-//   }
-// });
 
 
 
@@ -311,4 +301,7 @@ export default router;
 // });
 
 // // EXPORT ROUTER
-// module.exports = router;
+module.exports = router;
+
+
+
