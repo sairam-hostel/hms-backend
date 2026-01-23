@@ -248,4 +248,4 @@ function getMentorReviewHTML({ token, actionUrl }) {
 `;
 }
 
-module.exports = getMentorReviewHTML;
+export default getMentorReviewHTML;

@@ -1,9 +1,10 @@
-const express = require("express");
-const router = express.Router();
-const crypto = require("crypto");
+import express from "express";
+import crypto from "crypto";
 
-const { LeaveOutpass } = require("./leave-outpass-students");   // model import
-const Faculty = require("../accounts/creation-faculty").Faculty;
+import { LeaveOutpass } from "./leave-outpass-students.js";
+import { Faculty } from "../accounts/creation-faculty.js";
+
+const router = express.Router();
 
 // ======================================================================
 // ADMIN: GET LEAVE / OUTPASS REQUESTS (ALL NON-SYSTEM FILTERS)
@@ -308,7 +309,7 @@ router.patch("/:request_id/reject", async (req, res) => {
 // });
 
 // // EXPORT ROUTER
-module.exports = router;
+export default router;
 
 
 

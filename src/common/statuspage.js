@@ -81,5 +81,4 @@ function getStatusPage(username, serverInfo = {}) {
 </html>
 `;
 }
-
-module.exports = { getStatusPage };
+export { getStatusPage };

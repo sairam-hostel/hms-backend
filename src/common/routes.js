@@ -1,4 +1,4 @@
-module.exports = [
+export default [
   { path: "./src/auth/auth-faculty.js", prefix: "/bf1/auth" },
   { path: "./src/auth/auth-students.js", prefix: "/bs1/auth" },
 
@@ -20,14 +20,14 @@ module.exports = [
   { path: "./src/notices/notices-faculty.js", prefix: "/bf1/notices" },
   { path: "./src/notices/notices-students.js", prefix: "/bs1/notices" },
 
-  { path: "./src/room-management/room-student.js", prefix: "/bs1/rooms" },
-  { path: "./src/room-management/room-faculty.js", prefix: "/bf1/rooms" },
+  // { path: "./src/room-management/room-student.js", prefix: "/bs1/rooms" },
+  // { path: "./src/room-management/room-faculty.js", prefix: "/bf1/rooms" },
 
   { path: "./src/complaints/complaints-students.js", prefix: "/bs1/complaints" },
   { path: "./src/complaints/complaints-faculty.js", prefix: "/bf1/complaints" },
 
-  { path: "./src/fees/fees-student.js", prefix: "/bs1/fees" },
-  { path: "./src/fees/fees-faculty.js", prefix: "/bf1/fees" },
+  // { path: "./src/fees/fees-student.js", prefix: "/bs1/fees" },
+  // { path: "./src/fees/fees-faculty.js", prefix: "/bf1/fees" },
 
   //outside urls
   { path: "./src/leave-outpass/leave-outpass.js", prefix: "/bf1/review" },

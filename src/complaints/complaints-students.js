@@ -1,13 +1,14 @@
-const express = require("express");
+import express from "express";
+import crypto from "crypto";
+
+import verify from "../common/middleware.js";
 const router = express.Router();
-const verify = require("../common/middleware");
-const crypto = require("crypto");
+
 
 //--------------------------------------------------------------
 // COMPLAINT SCHEMA (array → schema)
 //--------------------------------------------------------------
-const mongoose = require("mongoose");
-
+import mongoose from "mongoose";
 const ComplaintSchemaArray = [
   // IDENTIFIERS
   { key: "complaint_id", type: "String", required: true, unique: true },
@@ -288,5 +289,5 @@ router.delete("/:id", verify, async (req, res) => {
   }
 });
 
-
-module.exports = { Complaint, router };
+export default router;
+export {Complaint};

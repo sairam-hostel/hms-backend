@@ -68,4 +68,4 @@ function getActionResultHTML({ status, message }) {
 `;
 }
 
-module.exports = getActionResultHTML;
+export default getActionResultHTML;

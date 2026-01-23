@@ -48,5 +48,4 @@ function hodEmailTemplate({
 </html>
 `;
 }
-
-module.exports = hodEmailTemplate;
+export default hodEmailTemplate;

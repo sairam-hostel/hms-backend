@@ -1,19 +1,23 @@
-const router = require("express").Router();
-const verify = require("../common/middleware");
-const multer = require("multer");
-const Faculty = require("../accounts/creation-faculty").Faculty;
-const Student = require("../accounts/creation-students").Student;
+import express from "express";
+import multer from "multer";
+import axios from "axios";
+import crypto from "crypto";
 
-const axios = require("axios");
-const { s3Client, MINIO_BUCKET,ensureBucket } = require("../common/minio-cfg");
-ensureBucket();   
+import verify from "../common/middleware.js";
+import { Faculty } from "../accounts/creation-faculty.js";
+import { Student } from "../accounts/creation-students.js";
 
-const crypto = require("crypto");
-const { S3RequestPresigner } = require("@aws-sdk/s3-request-presigner");
-const { HttpRequest } = require("@aws-sdk/protocol-http");
-const { formatUrl } = require("@aws-sdk/util-format-url");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const { Hash } = require("@aws-sdk/hash-node");
+import { s3Client, MINIO_BUCKET, ensureBucket } from "../common/minio-cfg.js";
+
+import { S3RequestPresigner } from "@aws-sdk/s3-request-presigner";
+import { HttpRequest } from "@aws-sdk/protocol-http";
+import { formatUrl } from "@aws-sdk/util-format-url";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { Hash } from "@aws-sdk/hash-node";
+
+const router = express.Router();
+
+ensureBucket();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -96,4 +100,5 @@ router.get("/view/:auth_user_id", verify, async (req, res) => {
   res.setHeader("Content-Type", response.headers["content-type"]);
   response.data.pipe(res);   // DIRECT STREAM
 });
-module.exports = router;
+
+export default router;

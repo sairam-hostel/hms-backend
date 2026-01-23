@@ -1,16 +1,18 @@
-require("dotenv").config();
+import dotenv from "dotenv";
+dotenv.config();
 
-const cors = require("cors");
-const express = require("express");
-const jwt = require("jsonwebtoken");
-const { connectDB } = require("./src/common/db");
-const routeDefs = require("./src/common/routes.js");
-const authMiddleware = require("./src/common/middleware");
-const { getStatusPage } = require("./src/common/statuspage.js");
-const serverStart = Date.now();
+import cors from "cors";
+import express from "express";
+import jwt from "jsonwebtoken";
+
+import { connectDB } from "./src/common/db.js";
+import routeDefs from "./src/common/routes.js";
+import authMiddleware from "./src/common/middleware.js";
+import { getStatusPage } from "./src/common/statuspage.js";
 
 
 const app = express();
+
 app.use(express.urlencoded({ extended: true }));
 app.set("etag", "strong");
 // -------------------- Middleware --------------------
@@ -72,13 +74,16 @@ app.use((req, res, next) => {
 // -------------------------------------------------------------
 // UNIVERSAL SAFE ROUTER LOADER
 // -------------------------------------------------------------
-function loadSafeRouter(modulePath, prefix) {
+async function loadSafeRouter(modulePath, prefix) {
   try {
-    const mod = require(modulePath);
+    const mod = await import(
+      new URL(modulePath, import.meta.url)
+    );
 
-    if (typeof mod === "function") return mod;
-    if (mod && typeof mod.router === "function") return mod.router;
-    if (mod && typeof mod.default === "function") return mod.default;
+    if (typeof mod.default === "function") return mod.default;
+    if (mod.router && typeof mod.router === "function") return mod.router;
+
+    throw new Error("No router export found");
   } catch (err) {
     console.warn(`⚠️ Could not load ${modulePath}: ${err.message}`);
   }
@@ -92,6 +97,7 @@ function loadSafeRouter(modulePath, prefix) {
       message: `Module ${modulePath} is not implemented or not exporting a router.`,
     });
   });
+
   return stub;
 }
 
@@ -112,9 +118,17 @@ const publicPrefixes = [
 // -------------------------------------------------------------
 // MOUNT ALL ROUTES
 // -------------------------------------------------------------
-routeDefs.forEach((r) => {
-  const router = loadSafeRouter(r.path, r.prefix);
-  const isPublic = publicPrefixes.some((pub) => r.prefix.startsWith(pub));
+for (const r of routeDefs) {
+  const router = await loadSafeRouter(r.path, r.prefix);
+
+  if (typeof router !== "function") {
+    console.warn(`⚠️ Invalid router for ${r.path}`);
+    continue;
+  }
+
+  const isPublic = publicPrefixes.some((pub) =>
+    r.prefix.startsWith(pub)
+  );
 
   if (isPublic) {
     app.use(r.prefix, router);
@@ -123,7 +137,8 @@ routeDefs.forEach((r) => {
     app.use(r.prefix, authMiddleware, router);
     console.log(`🔐 Protected Route Mounted: ${r.prefix}`);
   }
-});
+}
+
 
 
 app.get("/a1/status", (req, res) => {

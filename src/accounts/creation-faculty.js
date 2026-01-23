@@ -1,9 +1,9 @@
+import express from "express";
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
-const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
 
 // ===============================================================
 // EXTENDED FACULTY SCHEMA (SNAKE_CASE, 26 FIELDS)
@@ -417,7 +417,5 @@ router.patch("/:auth_user_id", async (req, res) => {
 // ===============================================================
 // STEP 7: EXPORT CORRECTLY
 // ===============================================================
-module.exports = {
-  Faculty,
-  router
-};
+export default router;
+export { Faculty};

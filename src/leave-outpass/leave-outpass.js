@@ -1,14 +1,16 @@
-const express = require("express");
-const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
+import express from "express";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
-const { Student } = require("../accounts/creation-students");
-const { LeaveOutpass } = require("./leave-outpass-students.js");
-const getMentorReviewHTML = require("../templates/mentor-html.js");
-const getHodReviewHTML = require("../templates/hod-html.js");
-const hodEmailTemplate = require("../templates/hod-email.js");
-const getActionResultHTML = require("../templates/response.js");
-const { sendEmail } = require("../common/mailer");
+import { Student } from "../accounts/creation-students.js";
+import { LeaveOutpass } from "./leave-outpass-students.js";
+
+import getMentorReviewHTML from "../templates/mentor-html.js";
+import getHodReviewHTML from "../templates/hod-html.js";
+import hodEmailTemplate from "../templates/hod-email.js";
+import getActionResultHTML from "../templates/response.js";
+
+import { sendEmail } from "../common/mailer.js";
 
 const router = express.Router();
 // HMAC SECRET (should come from env)
@@ -373,5 +375,4 @@ function createResultToken(payload) {
   );
 }
 
-
-module.exports = { router };
+export default router;

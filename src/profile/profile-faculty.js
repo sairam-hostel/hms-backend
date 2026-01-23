@@ -1,8 +1,8 @@
 // src/accounts/faculty-profile.js
-const express = require("express");
-const router = express.Router();
+import express from "express";
+import { Faculty } from "../accounts/creation-faculty.js";
 
-const { Faculty } = require("../accounts/creation-faculty");
+const router = express.Router();
 
 // GET /profile/faculty — get profile of logged-in faculty
 router.get("/", async (req, res) => {
@@ -11,7 +11,6 @@ router.get("/", async (req, res) => {
     if (!authUserId) {
       return res.status(401).json({ issue: "unauthorized", message: "Invalid token / not logged in." });
     }
-
     const faculty = await Faculty.findOne({ auth_user_id: authUserId }).select("-password");
     if (!faculty) {
       return res.status(404).json({ issue: "not_found", message: "Faculty not found." });
@@ -24,4 +23,5 @@ router.get("/", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
+

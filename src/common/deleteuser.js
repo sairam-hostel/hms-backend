@@ -1,9 +1,10 @@
-const express = require("express");
-const router = express.Router();
-const mongoose = require("mongoose");
+import express from "express";
+import mongoose from "mongoose";
 
-const { Faculty } = require("../accounts/creation-faculty");
-const { Student } = require("../accounts/creation-students");
+import { Faculty } from "../accounts/creation-faculty.js";
+import { Student } from "../accounts/creation-students.js";
+
+const router = express.Router();
 
 // ==================================================
 // 🔐 STATIC ADMIN PASSWORD (CHANGE THIS)
@@ -173,4 +174,4 @@ async function deleteSpecificCollections(names = []) {
 // ==================================================
 // ✅ EXPORT ROUTER ONLY
 // ==================================================
-module.exports = router;
+export default router;

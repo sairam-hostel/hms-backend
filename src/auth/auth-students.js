@@ -1,11 +1,13 @@
-// src/accounts/auth-student.js
 
-const express = require("express");
+
+import express from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+import { Student } from "../accounts/creation-students.js";
+
 const router = express.Router();
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 
-const { Student } = require("../accounts/creation-students");
 
 router.post("/login", async (req, res) => {
   try {
@@ -84,4 +86,4 @@ router.post("/login", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

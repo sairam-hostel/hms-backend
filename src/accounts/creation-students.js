@@ -1,9 +1,9 @@
-// src/accounts/creation-students.js
-const express = require("express");
-const router = express.Router();
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
+import express from "express";
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+const router = express.Router(); 
+
 const StudentSchemaArray = [
 
   // ================= AUTH =================
@@ -701,7 +701,9 @@ router.get("/", async (req, res) => {
     });
   }
 });
-module.exports = {
+export default router;
+
+export {
   Student,
-  router
 };
+

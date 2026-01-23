@@ -1,15 +1,13 @@
-// src/leave-outpass/leave-outpass.js
+import express from "express";
+import mongoose from "mongoose";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
-const express = require("express");
+import { Student } from "../accounts/creation-students.js";
+import { sendEmail } from "../common/mailer.js";
+import { mentorEmailTemplate } from "../templates/mentor-email.js";
+
 const router = express.Router();
-const mongoose = require("mongoose");
-const crypto = require("crypto");
-const { Student } = require("../accounts/creation-students");
-
-const jwt = require("jsonwebtoken")
-const { sendEmail } = require("../common/mailer");
-const { mentorEmailTemplate } = require("../templates/mentor-email");
-
 
 const LeaveOutpassSchemaArray = [
   
@@ -605,7 +603,7 @@ router.delete("/:request_id", async (req, res) => {
 });
 
 // EXPORT ROUTER
-module.exports = {
-    router,
+export default router;
+export {
     LeaveOutpass
 };

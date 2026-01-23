@@ -1,7 +1,10 @@
-const express = require("express");
+import express from "express";
+import mongoose from "mongoose";
+
+import verify from "../common/middleware.js";
+
 const router = express.Router();
-const mongoose = require("mongoose");
-const verify = require("../common/middleware");   // adjust path if needed
+
 
 // ===============================================================
 // 1. NOTICE SCHEMA ARRAY (20+ Detailed Fields)
@@ -346,7 +349,8 @@ router.get("/:id", verify, async (req, res) => {
   }
 });
 
-module.exports = {
-    router,
-    Notice
+export default router;
+
+export {
+  Notice
 };

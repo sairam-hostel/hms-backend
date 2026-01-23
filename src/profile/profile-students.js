@@ -1,8 +1,7 @@
 // src/accounts/student-profile.js
-const express = require("express");
+import express from "express";
+import { Student } from "../accounts/creation-students.js";
 const router = express.Router();
-
-const { Student } = require("../accounts/creation-students");
 
 // GET /profile/student — get profile of logged-in student
 router.get("/", async (req, res) => {
@@ -24,4 +23,5 @@ router.get("/", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
+

@@ -1,15 +1,17 @@
-const router = require("express").Router();
-const verify = require("../common/middleware");
+import express from "express";
+import axios from "axios";
+import crypto from "crypto";
 
-const Student = require("../accounts/creation-students").Student;
-const axios = require("axios");
-const { s3Client, MINIO_BUCKET } = require("../common/minio-cfg");
+import verify from "../common/middleware.js";
+import { Student } from "../accounts/creation-students.js";
+import { s3Client, MINIO_BUCKET } from "../common/minio-cfg.js";
 
-const crypto = require("crypto");
-const { S3RequestPresigner } = require("@aws-sdk/s3-request-presigner");
-const { HttpRequest } = require("@aws-sdk/protocol-http");
-const { formatUrl } = require("@aws-sdk/util-format-url");
-const { Hash } = require("@aws-sdk/hash-node");
+import { S3RequestPresigner } from "@aws-sdk/s3-request-presigner";
+import { HttpRequest } from "@aws-sdk/protocol-http";
+import { formatUrl } from "@aws-sdk/util-format-url";
+import { Hash } from "@aws-sdk/hash-node";
+
+const router = express.Router();
 
 async function signedUrl(objectKey) {
   const signer = new S3RequestPresigner({
@@ -53,5 +55,5 @@ router.get("/view", verify, async (req, res) => {
   response.data.pipe(res);
 });
 
-module.exports = router;
+export default router;
 

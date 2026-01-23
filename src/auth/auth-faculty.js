@@ -1,10 +1,11 @@
-const express = require("express");
-const router = express.Router();
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
+import express from "express";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
-const Faculty = require("../accounts/creation-faculty").Faculty;
+import { Faculty } from "../accounts/creation-faculty.js";
+
+const router = express.Router();
 
 
 // ==============================
@@ -62,4 +63,4 @@ router.post("/login", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,11 +1,13 @@
-const express = require("express");
+import express from "express";
+import mongoose from "mongoose";
+
+import verify from "../common/middleware.js";
+import { Notice } from "./notices-faculty.js";
+import { Student } from "../accounts/creation-students.js";
+
 const router = express.Router();
-const mongoose = require("mongoose");
-const verify = require("../common/middleware"); // adjust if needed
 
-const Notice = require("./notices-faculty").Notice;
 
-const Student = require("../accounts/creation-students").Student;
 
 // -------------------------------------------------------------
 // Helper: Smart targeting filters based on student profile
@@ -161,4 +163,4 @@ router.post("/:id", verify, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

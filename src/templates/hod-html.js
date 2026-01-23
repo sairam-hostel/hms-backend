@@ -248,4 +248,4 @@ function getHodReviewHTML({ token, actionUrl }) {
 `;
 }
 
-module.exports = getHodReviewHTML;
+export default getHodReviewHTML;

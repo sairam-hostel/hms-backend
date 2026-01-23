@@ -1,9 +1,11 @@
-const express = require("express");
-const router = express.Router();
-const verify = require("../common/middleware");
-const mongoose = require("mongoose");
+import express from "express";
+import mongoose from "mongoose";
 
-const Complaint = require("./complaints-students").Complaint;
+import verify from "../common/middleware.js";
+import { Complaint } from "./complaints-students.js";
+
+const router = express.Router();
+
 // -------------------------
 // Faculty-only Middleware
 // -------------------------
@@ -202,4 +204,4 @@ router.post("/:id/resolve", verify, onlyFaculty, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

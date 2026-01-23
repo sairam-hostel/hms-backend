@@ -1,9 +1,13 @@
 // src/dashboard/dashboard-faculty.js
 
-const express = require("express");
+import express from "express";
+import mongoose from "mongoose";
+import crypto from "crypto";
+
 const router = express.Router();
-const mongoose = require("mongoose");
-const crypto = require("crypto");
+
+
+
 
 
 
@@ -245,6 +249,4 @@ router.get("/", async (req, res) => {
 });
 
 // EXPORT ROUTER
-module.exports = {
-    router
-};
+export default router;

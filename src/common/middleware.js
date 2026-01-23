@@ -1,18 +1,18 @@
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
 
-module.exports = function(req, res, next) {
+export default function verify(req, res, next) {
   const token = req.headers["authorization"]?.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ 
+    return res.status(401).json({
       issue: "missing_token",
-      message: "Authorization token missing" 
+      message: "Authorization token missing"
     });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;  // contains auth_user_id, role
+    req.user = decoded; // contains auth_user_id, role
     next();
   } catch (err) {
     return res.status(401).json({
@@ -20,4 +20,4 @@ module.exports = function(req, res, next) {
       message: "Token invalid or expired"
     });
   }
-};
+}
