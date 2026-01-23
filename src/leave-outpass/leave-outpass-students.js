@@ -323,6 +323,7 @@ router.post("/request", async (req, res) => {
 
     const doc = await LeaveOutpass.create(data);
 
+    
     // ✅ Generate Mentor Approval Token
     const mentorToken = jwt.sign(
       {
