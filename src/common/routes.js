@@ -23,6 +23,7 @@ export default [
   // { path: "./src/room-management/room-student.js", prefix: "/bs1/rooms" },
   // { path: "./src/room-management/room-faculty.js", prefix: "/bf1/rooms" },
 
+  
   { path: "./src/complaints/complaints-students.js", prefix: "/bs1/complaints" },
   { path: "./src/complaints/complaints-faculty.js", prefix: "/bf1/complaints" },
 

@@ -12,3 +12,4 @@ test.sh
 zscripts/
 bins/
 prod.sh.x
+check.sh
