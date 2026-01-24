@@ -25,7 +25,7 @@ export const mentorEmailTemplate = ({
     .btn {
       display: inline-block;
       padding: 12px 20px;
-      background-color: #2563eb;
+      background-color: #1adf00ff;
       color: #fff;
       text-decoration: none;
       border-radius: 5px;
