@@ -8,12 +8,14 @@ import { Faculty } from "../accounts/creation-faculty.js";
 import { Student } from "../accounts/creation-students.js";
 
 import { s3Client, MINIO_BUCKET, ensureBucket } from "../common/minio-cfg.js";
-
+import { URL } from "url";
 import { S3RequestPresigner } from "@aws-sdk/s3-request-presigner";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { formatUrl } from "@aws-sdk/util-format-url";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { Hash } from "@aws-sdk/hash-node";
+
+import { ROLE_GROUPS } from "../common/roles.js";
 
 const router = express.Router();
 
@@ -21,18 +23,21 @@ ensureBucket();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+
 async function signedUrl(objectKey) {
+  const endpoint = new URL(process.env.MINIO_ENDPOINT);
+
   const signer = new S3RequestPresigner({
     ...s3Client.config,
     sha256: Hash.bind(null, "sha256"),
   });
 
   const req = new HttpRequest({
-    ...s3Client.config,
-    protocol: "http:",
-    hostname: process.env.MINIO_HOST,
+    protocol: endpoint.protocol,     // http:
+    hostname: endpoint.hostname,      // 20.6.95.37
+    port: Number(endpoint.port),      // 9000 ✅
     method: "GET",
-    path: `/${MINIO_BUCKET}/${objectKey}`
+    path: `/${MINIO_BUCKET}/${objectKey}`,
   });
 
   return formatUrl(await signer.presign(req, { expiresIn: 300 }));
@@ -42,8 +47,8 @@ async function signedUrl(objectKey) {
     // UPLOAD (faculty → any user)
     // ---------------------------
     router.post("/upload-photo/:auth_user_id", verify, upload.single("photo"), async (req, res) => {
-    if (req.user.role !== "faculty") {
-        return res.status(403).json({ issue: "forbidden" });
+    if (!ROLE_GROUPS.FACULTY.includes(req.user.role)) {
+      return res.status(403).json({ issue: "forbidden" });
     }
 
     if (!req.file) {
@@ -77,10 +82,9 @@ async function signedUrl(objectKey) {
 // ----------------------------------------------
 router.get("/view/:auth_user_id", verify, async (req, res) => {
 
-  if (req.user.role !== "faculty") {
+  if (!ROLE_GROUPS.FACULTY.includes(req.user.role)) {
     return res.status(403).json({ issue: "forbidden" });
   }
-
   const targetId = req.params.auth_user_id;
 
   let record =

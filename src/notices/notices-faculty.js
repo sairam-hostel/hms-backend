@@ -5,6 +5,7 @@ import verify from "../common/middleware.js";
 
 const router = express.Router();
 
+import { ROLE_GROUPS } from "../common/roles.js";
 
 // ===============================================================
 // 1. NOTICE SCHEMA ARRAY (20+ Detailed Fields)
@@ -115,9 +116,9 @@ const protectedUpdateFields = [
 // CREATE NOTICE  (FACULTY ONLY)
 // ---------------------------------------------
 router.post("/", verify, async (req, res) => {
-  if (req.user.role !== "faculty") {
-    return res.status(403).json({ issue: "forbidden", message: "Only faculty can create notices" });
-  }
+    if (!ROLE_GROUPS.FACULTY.includes(req.user.role)) {
+      return res.status(403).json({ issue: "forbidden",message:"Only Admin can modify the data." });
+    }
 
   try {
     const incoming = sanitizeForCreate(req.body);
@@ -140,8 +141,9 @@ router.post("/", verify, async (req, res) => {
 // FULL UPDATE (PUT) — replace allowed fields
 // -------------------------------------------------------------
 router.put("/:id", verify, async (req, res) => {
-  if (req.user.role !== "faculty")
-    return res.status(403).json({ issue: "forbidden" });
+      if (!ROLE_GROUPS.FACULTY.includes(req.user.role)) {
+        return res.status(403).json({ issue: "forbidden" });
+      }
 
   try {
     const incoming = { ...req.body };
@@ -172,8 +174,9 @@ router.put("/:id", verify, async (req, res) => {
 // PARTIAL UPDATE (PATCH) — update only provided fields
 // -------------------------------------------------------------
 router.patch("/:id", verify, async (req, res) => {
-  if (req.user.role !== "faculty")
-    return res.status(403).json({ issue: "forbidden" });
+      if (!ROLE_GROUPS.FACULTY.includes(req.user.role)) {
+        return res.status(403).json({ issue: "forbidden" });
+      }
 
   try {
     const updates = { ...req.body };
@@ -212,8 +215,9 @@ router.patch("/:id", verify, async (req, res) => {
 // DELETE NOTICE (FACULTY ONLY)
 // ---------------------------------------------
 router.delete("/:id", verify, async (req, res) => {
-  if (req.user.role !== "faculty")
-    return res.status(403).json({ issue: "forbidden" });
+    if (!ROLE_GROUPS.FACULTY.includes(req.user.role)) {
+      return res.status(403).json({ issue: "forbidden" });
+    }
 
   try {
     const out = await Notice.findOneAndDelete({ notice_id: req.params.id });
@@ -233,9 +237,9 @@ router.delete("/:id", verify, async (req, res) => {
 // LIST ALL NOTICES (FACULTY VIEW) with Filters + Pagination
 // -------------------------------------------------------------
 router.get("/", verify, async (req, res) => {
-  if (req.user.role !== "faculty") {
-    return res.status(403).json({ issue: "forbidden" });
-  }
+    if (!ROLE_GROUPS.FACULTY.includes(req.user.role)) {
+      return res.status(403).json({ issue: "forbidden" });
+    }
 
   try {
     // ----------------------------
@@ -332,9 +336,10 @@ router.get("/", verify, async (req, res) => {
 // GET A SINGLE NOTICE
 // ---------------------------------------------
 router.get("/:id", verify, async (req, res) => {
-  if (req.user.role !== "faculty")
-    return res.status(403).json({ issue: "forbidden" });
-
+    if (!ROLE_GROUPS.FACULTY.includes(req.user.role)) {
+      return res.status(403).json({ issue: "forbidden" });
+    }
+    
   try {
     const one = await Notice.findOne({ notice_id: req.params.id });
 
