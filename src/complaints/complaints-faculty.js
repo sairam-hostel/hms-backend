@@ -4,15 +4,17 @@ import mongoose from "mongoose";
 import verify from "../common/middleware.js";
 import { Complaint } from "./complaints-students.js";
 
+import { ROLE_GROUPS } from "../common/roles.js";
+
 const router = express.Router();
 
 // -------------------------
 // Faculty-only Middleware
 // -------------------------
 function onlyFaculty(req, res, next) {
-  if (req.user.role !== "faculty") {
-    return res.status(403).json({ issue: "forbidden", message: "Faculty only" });
-  }
+    if (!ROLE_GROUPS.FACULTY.includes(req.user.role)) {
+      return res.status(403).json({ issue: "forbidden",message:"Only Admin can modify the data." });
+    }
   next();
 }
 
