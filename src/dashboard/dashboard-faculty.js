@@ -3,13 +3,9 @@
 import express from "express";
 import mongoose from "mongoose";
 import crypto from "crypto";
+import { getNoticeCounts, getRecentNotices, getStudentCountYearWise, getTotalMembers } from "./dashboardFunctions";
 
 const router = express.Router();
-
-
-
-
-
 
 // ===============================================================
 // FACULTY DASHBOARD SCHEMA ARRAY (100 Fields)
@@ -240,6 +236,106 @@ router.get("/", async (req, res) => {
     });
 
   } catch (err) {
+    return res.status(500).json({
+      success: false,
+      issue: "DASHBOARD_FETCH_FAILED",
+      error: err.message
+    });
+  }
+});
+
+router.get("/upperInfo", async (req, res) => {
+  try
+  {
+    const data={
+      total_students: getTotalMembers("students"),
+      total_faculty: getTotalMembers("faculties"),
+      total_wardens: getTotalMembers("faculties"),
+      total_notices: getNoticeCounts("active")
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Faculty dashboard data (dummy)",
+      data
+    });
+  }
+  catch(err)
+  {
+    return res.status(500).json({
+      success: false,
+      issue: "DASHBOARD_FETCH_FAILED",
+      error: err.message
+    });
+  }
+});
+
+router.get("/getStudentCountYearWise", async (req, res) => {
+  try
+  {
+    const data={
+      students_year_1: getStudentCountYearWise("1"),
+      students_year_2: getStudentCountYearWise("2"),
+      students_year_3: getStudentCountYearWise("3"),
+      students_year_4: getStudentCountYearWise("4"),
+      students_pg: 0,
+      students_phd: 0,
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Faculty dashboard data (dummy)",
+      data
+    });
+  }
+  catch(err)
+  {
+    return res.status(500).json({
+      success: false,
+      issue: "DASHBOARD_FETCH_FAILED",
+      error: err.message
+    });
+  }
+});
+
+router.get("/getStudentCountDepartmentWise", async (req, res) => {
+  try
+  {
+    const data={
+      dept_cse_students: 420,
+      dept_ece_students: 280,
+      dept_eee_students: 190,
+      dept_mech_students: 170,
+      dept_civil_students: 120,
+      dept_it_students: 45,
+      dept_ai_ds_students: 15,
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Faculty dashboard data (dummy)",
+      data
+    });
+  }
+  catch(err)
+  {
+    return res.status(500).json({
+      success: false,
+      issue: "DASHBOARD_FETCH_FAILED",
+      error: err.message
+    });
+  }
+});
+
+router.get("/getRecentNotices", async (req, res) => {
+  try
+  {
+    const data=getRecentNotices(5);
+    return res.status(200).json({
+      success: true,
+      message: "Faculty dashboard data (dummy)",
+      data
+    });
+  }
+  catch(err)
+  {
     return res.status(500).json({
       success: false,
       issue: "DASHBOARD_FETCH_FAILED",
