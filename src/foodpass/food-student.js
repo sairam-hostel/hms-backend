@@ -1,5 +1,10 @@
 import crypto from "crypto";
+import express from "express";
+import bcrypt from "bcryptjs";
+import verify from "../common/middleware.js";
+import mongoose from "mongoose";
 
+const router = express.Router();
 
 const FoodPassSchemaArray = [
 
@@ -46,6 +51,17 @@ const FoodPassSchemaArray = [
   { key: "updated_at", type: "Date", default: "Date.now" }
 ];
 
+// ===============================================================
+// STEP 2: TYPE MAP
+// ===============================================================
+const typeMap = {
+  String: String,
+  Number: Number,
+  Date: Date,
+  Array: Array,
+  Boolean: Boolean
+};
+
 const FoodPassSchemaObject = {};
 
 FoodPassSchemaArray.forEach(field => {
@@ -66,7 +82,7 @@ FoodPassSchema.pre("save", function () {
   this.updated_at = Date.now();
 });
 
-export const FoodPass = mongoose.model("FoodPass", FoodPassSchema);
+const FoodPass = mongoose.model("FoodPass", FoodPassSchema);
 
 const allowedCreateFields = [
   "pass_date","meal_type","meal_slot","guest_count",
@@ -88,6 +104,7 @@ function sanitizeForCreate(obj) {
   return out;
 }
 
+
 const protectedUpdateFields = [
   // IDENTIFIERS
   "pass_id", "student_id", "pass_date",
@@ -108,7 +125,17 @@ const protectedUpdateFields = [
   "edit_history"
 ];
 
-router.post("/", verify, async (req, res) => {
+function sanitizeForUpdate(obj) {
+  const out = {};
+  Object.keys(obj || {}).forEach(key => {
+    if (!protectedUpdateFields.includes(key)) {
+      out[key] = obj[key];
+    }
+  });
+  return out;
+}
+
+router.post("/",verify, async (req, res) => {
 
   // 🔒 STUDENT ONLY
   if (req.user.role !== "student") {
@@ -153,7 +180,7 @@ router.post("/", verify, async (req, res) => {
   }
 });
 
-router.get("/", verify, async (req, res) => {
+router.get("/",verify, async (req, res) => {
   try {
     let query = {};
 
@@ -176,7 +203,7 @@ router.get("/", verify, async (req, res) => {
   }
 });
 
-router.get("/:pass_id", verify, async (req, res) => {
+router.get("/:pass_id", verify,async (req, res) => {
   try {
     const pass = await FoodPass.findOne({ pass_id: req.params.pass_id });
 
@@ -209,10 +236,7 @@ router.get("/:pass_id", verify, async (req, res) => {
 router.patch("/:pass_id", verify, async (req, res) => {
 
   if (req.user.role !== "student") {
-    return res.status(403).json({
-      issue: "forbidden",
-      message: "Only students can update food passes."
-    });
+    return res.status(403).json({ issue: "forbidden" });
   }
 
   try {
@@ -226,26 +250,39 @@ router.patch("/:pass_id", verify, async (req, res) => {
       return res.status(403).json({ issue: "forbidden" });
     }
 
-    // NOTE: Later you can block updates after approval
-    // if (pass.status !== "pending") { ... }
+    // 🚫 SAME-DAY CHECK
+    if (!isSameDay(pass.pass_date, new Date())) {
+      return res.status(400).json({
+        issue: "edit_window_closed",
+        message: "Food pass can only be edited on the same day"
+      });
+    }
+
+    if (pass.status !== "pending") {
+      return res.status(400).json({
+        issue: "already_processed",
+        message: "Approved or rejected passes cannot be modified"
+      });
+    }
 
     const updates = sanitizeForUpdate(req.body);
 
     await FoodPass.updateOne(
       { pass_id: req.params.pass_id },
-      { $set: updates }
+      { $set: { ...updates, updated_at: Date.now() } }
     );
 
     return res.json({ success: true });
 
   } catch (err) {
     console.error("FoodPass Patch Error:", err);
-    res.status(500).json({
+    return res.status(500).json({
       issue: "server_error",
       message: "Could not update food pass"
     });
   }
 });
+
 
 router.put("/:pass_id", verify, async (req, res) => {
 
@@ -264,14 +301,25 @@ router.put("/:pass_id", verify, async (req, res) => {
       return res.status(403).json({ issue: "forbidden" });
     }
 
+    // 🚫 SAME-DAY CHECK
+    if (!isSameDay(pass.pass_date, new Date())) {
+      return res.status(400).json({
+        issue: "edit_window_closed",
+        message: "Food pass can only be replaced on the same day"
+      });
+    }
+
+    if (pass.status !== "pending") {
+      return res.status(400).json({
+        issue: "already_processed",
+        message: "Approved or rejected passes cannot be modified"
+      });
+    }
     const sanitized = sanitizeForCreate(req.body);
 
     const updated = await FoodPass.findOneAndUpdate(
       { pass_id: req.params.pass_id },
-      {
-        ...sanitized,
-        updated_at: Date.now()
-      },
+      { ...sanitized, updated_at: Date.now() },
       { new: true }
     );
 
@@ -279,12 +327,13 @@ router.put("/:pass_id", verify, async (req, res) => {
 
   } catch (err) {
     console.error("FoodPass Put Error:", err);
-    res.status(500).json({
+    return res.status(500).json({
       issue: "server_error",
       message: "Could not replace food pass"
     });
   }
 });
+
 
 router.delete("/:pass_id", verify, async (req, res) => {
 
@@ -303,19 +352,46 @@ router.delete("/:pass_id", verify, async (req, res) => {
       return res.status(403).json({ issue: "forbidden" });
     }
 
-    // Soft delete (preferred)
-    await FoodPass.updateOne(
-      { pass_id: req.params.pass_id },
-      { $set: { is_active: false, updated_at: Date.now() } }
-    );
+    // 🚫 SAME-DAY CHECK
+    if (!isSameDay(pass.pass_date, new Date())) {
+      return res.status(400).json({
+        issue: "delete_window_closed",
+        message: "Food pass can only be deleted on the same day"
+      });
+    }
 
-    return res.json({ success: true });
+    if (pass.status !== "pending") {
+      return res.status(400).json({
+        issue: "already_processed",
+        message: "Approved or rejected passes cannot be modified"
+      });
+    }
+    await FoodPass.deleteOne({ pass_id: req.params.pass_id });
+
+    return res.json({
+      success: true,
+      message: "Food pass permanently deleted"
+    });
 
   } catch (err) {
     console.error("FoodPass Delete Error:", err);
-    res.status(500).json({
+    return res.status(500).json({
       issue: "server_error",
       message: "Could not delete food pass"
     });
   }
 });
+
+
+// EXPORT ROUTER
+export default router;
+
+export { FoodPass};
+
+function isSameDay(d1, d2) {
+  const a = new Date(d1);
+  const b = new Date(d2);
+  a.setHours(0, 0, 0, 0);
+  b.setHours(0, 0, 0, 0);
+  return a.getTime() === b.getTime();
+}
