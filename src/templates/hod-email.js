@@ -15,7 +15,7 @@ function hodEmailTemplate({
     a.btn {
       display: inline-block;
       padding: 10px 16px;
-      background: #2563eb;
+      background: #00e823ff;
       color: #fff;
       text-decoration: none;
       border-radius: 5px;
