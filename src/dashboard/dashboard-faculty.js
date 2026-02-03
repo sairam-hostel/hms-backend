@@ -144,16 +144,16 @@ router.get("/", async (req, res) => {
       last_updated: now,
 
       // PEOPLE COUNTS
-      total_students: 1240,
-      total_faculty: 82,
-      total_wardens: 12,
-      total_people: 1334,
+      total_students: 1240, //done
+      total_faculty: 82, //done
+      total_wardens: 12, //done
+      total_people: 1334, //done
 
       // YEAR-WISE
-      students_year_1: 320,
-      students_year_2: 310,
-      students_year_3: 300,
-      students_year_4: 260,
+      students_year_1: 320, //done
+      students_year_2: 310, //done
+      students_year_3: 300, //done
+      students_year_4: 260, //done
       students_pg: 40,
       students_phd: 10,
 
@@ -170,7 +170,7 @@ router.get("/", async (req, res) => {
       students_above_75_percent: 980,
       students_below_75_percent: 260,
       students_above_8_cgpa: 410,
-      students_below_6_cgpa: 95,
+      students_below_6_cgpa: 95, 
       cgpa_verification_pending: 38,
       mentor_approval_pending: 22,
 
@@ -248,10 +248,10 @@ router.get("/upper-info", async (req, res) => {
   try
   {
     const data={
-      total_students: getTotalMembers("students"),
-      total_faculty: getTotalMembers("faculties"),
-      total_wardens: getTotalMembers("faculties"),
-      total_notices: getNoticeCounts("active")
+      total_students: await getTotalMembers("students"),
+      total_faculty: await getTotalMembers("faculties"),
+      total_wardens: await getTotalMembers("faculties"),
+      total_notices: await getNoticeCounts("active")
     }
     return res.status(200).json({
       success: true,
@@ -273,10 +273,10 @@ router.get("/getStudentCountYear-wise", async (req, res) => {
   try
   {
     const data={
-      students_year_1: getStudentCountYearWise("1"),
-      students_year_2: getStudentCountYearWise("2"),
-      students_year_3: getStudentCountYearWise("3"),
-      students_year_4: getStudentCountYearWise("4"),
+      students_year_1: await getStudentCountYearWise("1"),
+      students_year_2: await getStudentCountYearWise("2"),
+      students_year_3: await getStudentCountYearWise("3"),
+      students_year_4: await getStudentCountYearWise("4"),
       students_pg: 0,
       students_phd: 0,
     }
@@ -327,7 +327,7 @@ router.get("/getStudentCountDepartmentWise", async (req, res) => {
 router.get("/getRecentNotices", async (req, res) => {
   try
   {
-    const data=getRecentNotices(5);
+    const data= await getRecentNotices(5);
     return res.status(200).json({
       success: true,
       message: "Faculty dashboard data (dummy)",
