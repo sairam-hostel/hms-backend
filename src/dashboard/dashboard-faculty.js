@@ -3,7 +3,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import crypto from "crypto";
-import { getNoticeCounts, getRecentNotices, getStudentCountYearWise, getTotalMembers } from "./dashboardFunctions";
+import { getNoticeCounts, getRecentNotices, getStudentCountYearWise, getTotalMembers } from "./dashboard-functions.js";
 
 const router = express.Router();
 
@@ -244,7 +244,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/upperInfo", async (req, res) => {
+router.get("/upper-info", async (req, res) => {
   try
   {
     const data={
@@ -269,7 +269,7 @@ router.get("/upperInfo", async (req, res) => {
   }
 });
 
-router.get("/getStudentCountYearWise", async (req, res) => {
+router.get("/getStudentCountYear-wise", async (req, res) => {
   try
   {
     const data={

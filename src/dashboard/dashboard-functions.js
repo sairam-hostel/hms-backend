@@ -1,6 +1,6 @@
-import { Student } from "../accounts/creation-students";
-import { Faculty } from "../accounts/creation-faculty";
-import { Notice } from "../notices/notices-faculty";
+import { Student } from "../accounts/creation-students.js";
+import { Faculty } from "../accounts/creation-faculty.js";
+import { Notice } from "../notices/notices-faculty.js";
 
 export const getStudentCountYearWise=async(year)=>{
     return await Student.countDocuments({ year: String(year) });
