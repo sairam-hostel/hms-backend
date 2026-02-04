@@ -23,6 +23,8 @@ const LeaveOutpassSchemaArray = [
   { key: "place_to_visit", type: "String" },
   { key: "address_details", type: "String" },
   { key: "mode_of_transport", type: "String" },
+  { key: "document_proof", type: "String"},
+
 
   // ================= PICKUP PERSON DETAILS (FOR GIRLS) =================
   { key: "pickup_person_name", type: "String" },
@@ -46,6 +48,7 @@ const LeaveOutpassSchemaArray = [
   { key: "mentor_phone", type: "String" },
   { key: "mentor_status", type: "String", enum: ["pending", "approved", "rejected"], default: "pending" },
   { key: "mentor_note", type: "String" },
+  { key: "mentor_action_at", type: "Date" },
   { key: "mentor_action_at", type: "Date" },
 
   // ================= HOD =================
@@ -72,7 +75,7 @@ const LeaveOutpassSchemaArray = [
     enum: ["pending", "approved", "rejected", "cancelled", "completed"],
     default: "pending"
   },
-
+  
   // ================= LOCATION TRACKING =================
   {
     key: "location_status",
@@ -145,7 +148,7 @@ const LeaveOutpass = mongoose.model("LeaveOutpass", LeaveOutpassSchema);
 const allowedPublicFields = [
   // Request basics
   "type","request_reason","place_to_visit","address_details",
-  "mode_of_transport", "from_date","to_date","return_date",
+  "mode_of_transport", "from_date","to_date","return_date","document_proof",
   "expected_in_time", "pickup_person_name", "pickup_person_relation",
   "pickup_person_phone","pickup_person_id_type","pickup_person_id_number"
 ];
