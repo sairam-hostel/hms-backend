@@ -12,11 +12,11 @@ import { getStatusPage } from "./src/common/statuspage.js";
 
 
 const app = express();
-
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.set("etag", "strong");
 // -------------------- Middleware --------------------
-app.use(express.json());
+
 app.use(
   cors({
     origin: function (origin, callback) {
