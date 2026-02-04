@@ -3,7 +3,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import crypto from "crypto";
-import { getNoticeCounts, getRecentNotices, getStudentCountYearWise, getTotalMembers } from "./dashboard-functions.js";
+import { getNoticeCounts, getRecentNotices, getStudentCountDepartmentWise, getStudentCountYearWise, getTotalMembers } from "./dashboard-functions.js";
 
 const router = express.Router();
 
@@ -299,19 +299,10 @@ router.get("/getStudentCountYear-wise", async (req, res) => {
 router.get("/getStudentCountDepartmentWise", async (req, res) => {
   try
   {
-    const data={
-      dept_cse_students: 420,
-      dept_ece_students: 280,
-      dept_eee_students: 190,
-      dept_mech_students: 170,
-      dept_civil_students: 120,
-      dept_it_students: 45,
-      dept_ai_ds_students: 15,
-    }
     return res.status(200).json({
       success: true,
       message: "Faculty dashboard data (dummy)",
-      data
+      data : await getStudentCountDepartmentWise()
     });
   }
   catch(err)
