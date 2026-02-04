@@ -359,6 +359,159 @@ router.post("/register", async (req, res) => {
   }
 });
 
+  // ======================================================================
+  // BULK CREATE STUDENTS
+  // Body: [ { name, email, roll_number?, register_number?, password? }, ... ]
+  // ======================================================================
+  router.post("/register/bulk", async (req, res) => {
+    try {
+      const payload = req.body;
+
+      // ==========================================================
+      // 1️⃣ VALIDATE ARRAY INPUT
+      // ==========================================================
+      if (!Array.isArray(payload) || payload.length === 0) {
+        return res.status(400).json({
+          issue: "invalid_payload",
+          message: "Request body must be a non-empty array"
+        });
+      }
+
+      const results = [];
+      const docsToInsert = [];
+      const now = new Date();
+
+      // ==========================================================
+      // 2️⃣ PREFETCH UNIQUE FIELDS (SINGLE DB HIT EACH)
+      // ==========================================================
+      const emails = [];
+      const rolls = [];
+      const regs = [];
+
+      for (const s of payload) {
+        if (s?.email) emails.push(s.email.toLowerCase());
+        if (s?.roll_number) rolls.push(s.roll_number);
+        if (s?.register_number) regs.push(s.register_number);
+      }
+
+      const [existingEmails, existingRolls, existingRegs] = await Promise.all([
+        Student.find({ email: { $in: emails } }, { email: 1 }),
+        Student.find({ roll_number: { $in: rolls } }, { roll_number: 1 }),
+        Student.find({ register_number: { $in: regs } }, { register_number: 1 })
+      ]);
+
+      const emailSet = new Set(existingEmails.map(e => e.email));
+      const rollSet = new Set(existingRolls.map(r => r.roll_number));
+      const regSet  = new Set(existingRegs.map(r => r.register_number));
+
+      // ==========================================================
+      // 3️⃣ PROCESS EACH RECORD
+      // ==========================================================
+      for (let i = 0; i < payload.length; i++) {
+        const incoming = payload[i] || {};
+
+        // ---- required
+        if (!incoming.name || !incoming.email) {
+          results.push({
+            index: i,
+            status: "failed",
+            issue: "missing_fields"
+          });
+          continue;
+        }
+
+        const email = incoming.email.toLowerCase();
+
+        // ---- uniqueness
+        if (emailSet.has(email)) {
+          results.push({
+            index: i,
+            status: "skipped",
+            issue: "email_exists",
+            email
+          });
+          continue;
+        }
+
+        if (incoming.roll_number && rollSet.has(incoming.roll_number)) {
+          results.push({
+            index: i,
+            status: "skipped",
+            issue: "roll_number_exists",
+            roll_number: incoming.roll_number
+          });
+          continue;
+        }
+
+        if (incoming.register_number && regSet.has(incoming.register_number)) {
+          results.push({
+            index: i,
+            status: "skipped",
+            issue: "register_number_exists",
+            register_number: incoming.register_number
+          });
+          continue;
+        }
+
+        // ======================================================
+        // BUILD DOCUMENT
+        // ======================================================
+        const data = sanitizeForCreate(incoming);
+
+        const rawPassword = incoming.password || "Student@123";
+        data.password = await bcrypt.hash(rawPassword, 10);
+
+        data.role = "student";
+        data.email = email;
+
+        data.auth_user_id =
+          crypto.randomUUID?.() ||
+          crypto.randomBytes(16).toString("hex");
+
+        data.created_at = now;
+        data.updated_at = now;
+
+        docsToInsert.push(data);
+
+        // lock uniqueness inside this batch
+        emailSet.add(email);
+        if (incoming.roll_number) rollSet.add(incoming.roll_number);
+        if (incoming.register_number) regSet.add(incoming.register_number);
+
+        results.push({
+          index: i,
+          status: "queued",
+          email
+        });
+      }
+
+      // ==========================================================
+      // 4️⃣ INSERT
+      // ==========================================================
+      if (docsToInsert.length > 0) {
+        await Student.insertMany(docsToInsert, { ordered: false });
+      }
+
+      // ==========================================================
+      // 5️⃣ RESPONSE
+      // ==========================================================
+      return res.json({
+        success: true,
+        total_received: payload.length,
+        inserted: docsToInsert.length,
+        results
+      });
+
+    } catch (err) {
+      console.error("Bulk Student Register Error:", err);
+      return res.status(500).json({
+        issue: "server_error",
+        message: "Internal server error"
+      });
+    }
+  });
+
+
 // ======================================================================
 // 2. GET ALL STUDENTS (FILTERS + SEARCH + PAGINATION)
 // ======================================================================
