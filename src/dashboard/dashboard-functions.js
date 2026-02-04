@@ -1,6 +1,8 @@
 import { Student } from "../accounts/creation-students.js";
 import { Faculty } from "../accounts/creation-faculty.js";
 import { Notice } from "../notices/notices-faculty.js";
+import { Complaint } from "../complaints/complaints-students.js";
+import { LeaveOutpass } from "../leave-outpass/leave-outpass-students.js";
 
 export const DEPARTMENTS = [
     "Civil Engineering",
@@ -73,4 +75,15 @@ export const getCgpaBasedCounts=async (filter)=>{
             cgpa: { $lt: 8 }
         });
     }
+}
+
+export const getPendingComplaints=async()=>{
+    return await Complaint.countDocuments({ status: "pending" });
+}
+
+export const getPendingRequests=async(type)=>{
+    return await LeaveOutpass.countDocuments({ 
+        admin_status: "pending",
+        type
+    });
 }

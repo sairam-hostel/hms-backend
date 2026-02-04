@@ -3,7 +3,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import crypto from "crypto";
-import { getNoticeCounts, getRecentNotices, getStudentCountDepartmentWise, getStudentCountYearWise, getTotalMembers } from "./dashboard-functions.js";
+import { getNoticeCounts, getPendingComplaints, getPendingRequests, getRecentNotices, getStudentCountDepartmentWise, getStudentCountYearWise, getTotalMembers } from "./dashboard-functions.js";
 
 const router = express.Router();
 
@@ -157,7 +157,7 @@ router.get("/", async (req, res) => {
       students_pg: 40,
       students_phd: 10,
 
-      // DEPARTMENT-WISE
+      // DEPARTMENT-WISE ------ completed
       dept_cse_students: 420,
       dept_ece_students: 280,
       dept_eee_students: 190,
@@ -251,7 +251,10 @@ router.get("/upper-info", async (req, res) => {
       total_students: await getTotalMembers("students"),
       total_faculty: await getTotalMembers("faculties"),
       total_wardens: await getTotalMembers("faculties"),
-      total_notices: await getNoticeCounts("active")
+      total_notices: await getNoticeCounts("active"),
+      total_complaints: await getPendingComplaints(),
+      total_leave_request: await getPendingRequests("leave"),
+      total_outpass_request: await getPendingRequests("outpass"),
     }
     return res.status(200).json({
       success: true,
@@ -269,7 +272,7 @@ router.get("/upper-info", async (req, res) => {
   }
 });
 
-router.get("/getStudentCountYear-wise", async (req, res) => {
+router.get("/get-student-count-year-wise", async (req, res) => {
   try
   {
     const data={
@@ -296,7 +299,7 @@ router.get("/getStudentCountYear-wise", async (req, res) => {
   }
 });
 
-router.get("/getStudentCountDepartmentWise", async (req, res) => {
+router.get("/get-student-count-department-wise", async (req, res) => {
   try
   {
     return res.status(200).json({
@@ -315,7 +318,7 @@ router.get("/getStudentCountDepartmentWise", async (req, res) => {
   }
 });
 
-router.get("/getRecentNotices", async (req, res) => {
+router.get("/get-recent-notices", async (req, res) => {
   try
   {
     const data= await getRecentNotices(5);
