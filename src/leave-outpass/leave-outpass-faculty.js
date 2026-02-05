@@ -3,101 +3,147 @@ import crypto from "crypto";
 
 import { LeaveOutpass } from "./leave-outpass-students.js";
 import { Faculty } from "../accounts/creation-faculty.js";
-
+import { Student } from "../accounts/creation-students.js";
 const router = express.Router();
 
-// ======================================================================
-// ADMIN: GET LEAVE / OUTPASS REQUESTS (ALL NON-SYSTEM FILTERS)
-// ======================================================================
-router.get("/", async (req, res) => {
-  try {
-    const q = {};
 
-    // ================= IDENTIFIERS =================
-    if (req.query.request_id) q.request_id = req.query.request_id;
-    if (req.query.auth_user_id) q.auth_user_id = req.query.auth_user_id;
+function hiddenProjection() {
+  return {
+    mentor_id: 0,
+    mentor_note: 0,
 
-    // ================= REQUEST CORE =================
-    if (req.query.type) q.type = req.query.type; // leave | outpass
-    if (req.query.status) q.status = req.query.status;
-    if (req.query.current_level) q.current_level = req.query.current_level;
+    hod_id: 0,
+    hod_note: 0,
 
-    // ================= APPROVAL STATES =================
-    if (req.query.mentor_status) q.mentor_status = req.query.mentor_status;
-    if (req.query.hod_status) q.hod_status = req.query.hod_status;
-    if (req.query.admin_status) q.admin_status = req.query.admin_status;
+    admin_id: 0,
+    admin_note: 0,
 
-    // ================= AUTHORITIES =================
-    if (req.query.mentor_email) q.mentor_email = req.query.mentor_email;
-    if (req.query.hod_email) q.hod_email = req.query.hod_email;
-    if (req.query.admin_email) q.admin_email = req.query.admin_email;
+    gate_verified_by: 0,
+    qr_payload: 0,
+    qr_signature: 0,
 
-    // ================= REQUEST DETAILS =================
-    if (req.query.mode_of_transport) q.mode_of_transport = req.query.mode_of_transport;
+     password:0,
 
-    // ================= PICKUP PERSON =================
-    if (req.query.pickup_person_name) q.pickup_person_name = req.query.pickup_person_name;
-    if (req.query.pickup_person_relation) q.pickup_person_relation = req.query.pickup_person_relation;
-    if (req.query.pickup_person_phone) q.pickup_person_phone = req.query.pickup_person_phone;
-    if (req.query.pickup_person_id_type) q.pickup_person_id_type = req.query.pickup_person_id_type;
+    action_history: 0,
+    __v: 0
+  };
+}
 
-    // ================= LOCATION & GATE =================
-    if (req.query.location_status) q.location_status = req.query.location_status;
-    if (req.query.escalation_level) q.escalation_level = req.query.escalation_level;
-    if (req.query.is_gate_in_missed !== undefined) {
-      q.is_gate_in_missed = req.query.is_gate_in_missed === "true";
-    }
 
-    // ================= DATE FILTERS =================
-    if (req.query.from_date) {
-      q.from_date = { $gte: new Date(req.query.from_date) };
-    }
+  // ======================================================================
+  // ADMIN: GET LEAVE / OUTPASS REQUESTS (WITH STUDENT DATA)
+  // ======================================================================
+  router.get("/", async (req, res) => {
+    try {
+      const q = {};
 
-    if (req.query.to_date) {
-      q.to_date = { $lte: new Date(req.query.to_date) };
-    }
+      // ------------------------------------------------
+      // BASIC FILTERS
+      // ------------------------------------------------
+      if (req.query.request_id) q.request_id = req.query.request_id;
+      if (req.query.auth_user_id) q.auth_user_id = req.query.auth_user_id;
+      if (req.query.type) q.type = req.query.type;
+      if (req.query.status) q.status = req.query.status;
+      if (req.query.current_level) q.current_level = req.query.current_level;
 
-    if (req.query.return_date) {
-      q.return_date = new Date(req.query.return_date);
-    }
-
-    if (req.query.created_from || req.query.created_to) {
-      q.created_at = {};
-      if (req.query.created_from) {
-        q.created_at.$gte = new Date(req.query.created_from);
+      // ------------------------------------------------
+      // DATE FILTERS
+      // ------------------------------------------------
+      if (req.query.from_date) {
+        q.from_date = { $gte: new Date(req.query.from_date) };
       }
-      if (req.query.created_to) {
-        q.created_at.$lte = new Date(req.query.created_to);
+      if (req.query.to_date) {
+        q.to_date = { $lte: new Date(req.query.to_date) };
       }
+
+      // ------------------------------------------------
+      // SAFE TEXT SEARCH
+      // ------------------------------------------------
+      if (req.query.search && req.query.search.trim() !== "") {
+        const r = new RegExp(req.query.search.trim(), "i");
+        q.$or = [
+          { request_reason: r },
+          { place_to_visit: r },
+          { address_details: r }
+        ];
+      }
+
+      // ------------------------------------------------
+      // FETCH LEAVE / OUTPASS
+      // ------------------------------------------------
+      const leaveList = await LeaveOutpass
+        .find(q)
+        .sort({ created_at: -1 })
+        .lean();
+
+      // // 🔍 DEBUG: log first leave/outpass
+      // if (leaveList.length > 0) {
+      //   console.log("🔹 FIRST LEAVE/OUTPASS:", leaveList[0]);
+      // }
+
+      if (!leaveList.length) {
+        return res.json({
+          success: true,
+          count: 0,
+          data: []
+        });
+      }
+
+      // ------------------------------------------------
+      // FETCH STUDENTS
+      // ------------------------------------------------
+      const authUserIds = [...new Set(
+        leaveList.map(l => l.auth_user_id)
+      )];
+
+      // console.log("🔹 AUTH USER IDS FROM LEAVE:", authUserIds);
+
+      const students = await Student
+        .find({ auth_user_id: { $in: authUserIds } })
+        .select(hiddenProjection())
+        .lean();
+
+      // // 🔍 DEBUG: log first student
+      // if (students.length > 0) {
+      //   console.log("🔹 FIRST STUDENT:", students[0]);
+      // } else {
+      //   console.warn("⚠️ NO STUDENTS FOUND FOR THESE AUTH IDS");
+      // }
+
+      // ------------------------------------------------
+      // MAP auth_user_id → student
+      // ------------------------------------------------
+      const studentMap = {};
+      for (const s of students) {
+        studentMap[s.auth_user_id] = s;
+      }
+
+      // ------------------------------------------------
+      // MERGE ROW-WISE
+      // ------------------------------------------------
+      const data = leaveList.map(l => ({
+        ...l,
+        student: studentMap[l.auth_user_id] || null
+      }));
+
+      // ------------------------------------------------
+      // RESPONSE
+      // ------------------------------------------------
+      return res.json({
+        success: true,
+        count: data.length,
+        data
+      });
+
+    } catch (err) {
+      console.error("Admin Leave List Error:", err);
+      return res.status(500).json({
+        success: false,
+        issue: "server_error",
+        message: "Internal server error"
+      });
     }
-
-    // ================= SAFE TEXT SEARCH =================
-    if (req.query.search) {
-      const r = new RegExp(req.query.search, "i");
-      q.$or = [
-        { request_reason: r },
-        { place_to_visit: r },
-        { address_details: r }
-      ];
-    }
-
-    const list = await LeaveOutpass
-      .find(q)
-      .sort({ created_at: -1 })
-      .lean();
-
-    return res.json({
-      success: true,
-      filters_applied: Object.keys(q),
-      count: list.length,
-      data: list
-    });
-
-  } catch (err) {
-    console.error("Admin GET Error:", err);
-    return res.status(500).json({ issue: "server_error" });
-  }
-});
+  });
 
 // ======================================================================
 // ADMIN: APPROVE REQUEST (FACULTY-SOURCE LOGGING)
