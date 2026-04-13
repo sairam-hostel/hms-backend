@@ -14,11 +14,14 @@ async function connectDB() {
     return;
   }
 
-  const uri = process.env.MONGO_URI;
+  const isProd = process.env.NODE_ENV === "production";
+  const uri = isProd ? process.env.MONGO_URI : process.env.MONGO_URI_LOCAL;
   const dbName = process.env.MONGO_DB_NAME;
 
+  console.log(`🔌 Initializing database connection in [${isProd ? "PRODUCTION" : "LOCAL"}] mode...`);
+
   if (!uri) {
-    console.error("❌ Missing MONGO_URI in .env file.");
+    console.error(`❌ Missing ${isProd ? "MONGO_URI" : "MONGO_URI_LOCAL"} in .env file.`);
     process.exit(1);
   }
 
