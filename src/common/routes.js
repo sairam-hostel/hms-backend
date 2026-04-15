@@ -26,6 +26,9 @@ export default [
   { path: "./src/complaints/complaints-students.js", prefix: "/bs1/complaints" },
   { path: "./src/complaints/complaints-faculty.js", prefix: "/bf1/complaints" },
 
+  // Outing — student feature only (admin actions are role-gated inside the same router)
+  { path: "./src/outing/outing-students.js", prefix: "/bs1/outing" },
+
   // { path: "./src/fees/fees-student.js", prefix: "/bs1/fees" },
   // { path: "./src/fees/fees-faculty.js", prefix: "/bf1/fees" },
 

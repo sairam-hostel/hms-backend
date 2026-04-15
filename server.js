@@ -109,9 +109,9 @@ const publicPrefixes = [
   "/bf1/auth",
   "/bs1/auth",
   "/b1/delete",
-  "/bf1/review"
+  "/bf1/review",
   // "/bf1/accounts/students",
-  // "/bf1/accounts/faculty",
+  "/bf1/accounts/faculty",
   
 ];
 
@@ -139,7 +139,9 @@ for (const r of routeDefs) {
   }
 }
 
-
+app.get("",(req,res)=>{
+  res.send("The server is running in the"+{PORT})
+})
 
 app.get("/a1/status", (req, res) => {
   const username = "backend team";
